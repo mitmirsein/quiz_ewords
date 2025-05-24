@@ -321,6 +321,6 @@ const WORDS_DATA = [
 ];
 
 // 퀴즈 설정 상수
-const QUESTIONS_PER_QUIZ = 10; // 단어 수가 충분하므로 10문제 또는 그 이상으로 조정 가능
+const QUESTIONS_PER_QUIZ = 20; // 단어 수가 충분하므로 10문제 또는 그 이상으로 조정 가능
 const OPTIONS_COUNT = 4;
 const LEVEL_UP_THRESHOLD_PERCENTAGE = 70;
