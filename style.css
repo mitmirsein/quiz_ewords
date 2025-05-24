@@ -1,0 +1,55 @@
+/* style.css */
+
+/* 기본 body 스타일 */
+body { 
+    font-family: 'Pretendard', 'Noto Sans KR', sans-serif; 
+    overscroll-behavior-y: contain; /* 모바일에서 당겨서 새로고침 방지 */
+    /* Tailwind 클래스로 대체된 부분은 제거: @apply bg-slate-100; 등은 body 태그에 직접 클래스로 적용 */
+}
+
+/* 레벨 선택 버튼 스타일 */
+.level-button {
+    @apply w-full py-8 
+           px-6 
+           text-3xl 
+           font-bold 
+           text-white 
+           rounded-xl 
+           shadow-lg 
+           transition-all duration-150 ease-in-out 
+           hover:scale-105 hover:shadow-xl 
+           focus:outline-none focus:ring-4 focus:ring-opacity-75;
+}
+.level-button.beginner { @apply bg-green-500 hover:bg-green-600 focus:ring-green-400; }
+.level-button.intermediate { @apply bg-blue-500 hover:bg-blue-600 focus:ring-blue-400; }
+.level-button.advanced { @apply bg-purple-500 hover:bg-purple-600 focus:ring-purple-400; }
+/* .level-button.locked 클래스는 app.js에서 모든 레벨을 열도록 변경되어 현재 사용되지 않음 */
+/* 필요시 주석 해제
+.level-button.locked { 
+    @apply bg-slate-400 opacity-70 cursor-not-allowed hover:scale-100 focus:ring-slate-300; 
+} 
+*/
+
+/* 퀴즈 보기 버튼 스타일 */
+.quiz-option-button {
+    @apply w-full p-3 md:p-4 text-left font-medium rounded-lg shadow-sm transition-all duration-150 ease-in-out border focus:outline-none focus:ring-2 focus:ring-offset-2 relative;
+}
+.quiz-option-button.default { @apply bg-white hover:bg-sky-50 text-sky-700 border-sky-300 focus:ring-sky-400; }
+.quiz-option-button.selected { @apply ring-2 ring-sky-500 border-sky-500 bg-sky-50; } /* JS에서 선택 시 임시 스타일 */
+
+.quiz-option-button.correct { 
+    @apply bg-green-500 text-white border-green-600 hover:bg-green-500 focus:ring-green-400 cursor-default; 
+}
+.quiz-option-button.incorrect { 
+    @apply bg-red-500 text-white border-red-600 hover:bg-red-500 focus:ring-red-400 cursor-default; 
+}
+.quiz-option-button.unselected-after-reveal { /* 선택되지 않은 오답 (정답 공개 후) */
+    @apply bg-slate-100 text-slate-400 border-slate-300 hover:bg-slate-100 cursor-default opacity-65;
+}
+.quiz-option-button.answered { /* 모든 선택지 공통 (정답 공개 후) */
+    @apply cursor-not-allowed;
+}
+
+/* 
+  Tailwind로 표현하기 어려운 추가적인 커스텀 스타일이 있다면 여기에 작성합니다.
+*/
