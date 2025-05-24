@@ -46,16 +46,14 @@
 3.  `index.html` 파일을 웹 브라우저에서 엽니다. (별도의 빌드 과정이 필요 없는 순수 HTML/CSS/JS 프로젝트입니다.)
 
 ## ⚙️ 프로젝트 구조
-
+Use code with caution.
+Markdown
 quiz_ewords/
 ├── index.html # 메인 HTML 파일
 ├── app.js # 퀴즈 로직 및 애플리케이션 상태 관리
 ├── words.js # 단어 데이터 및 퀴즈 설정 (레벨, 문제 수 등)
 ├── style.css # 커스텀 CSS 스타일 (Tailwind CSS와 함께 사용)
 └── README.md # 프로젝트 설명 문서
-
-
-
 ## 📝 주요 설정값 (words.js)
 
 `words.js` 파일 내에서 다음과 같은 주요 설정값을 조정할 수 있습니다:
@@ -64,3 +62,31 @@ quiz_ewords/
 *   `QUESTIONS_PER_QUIZ`: 각 퀴즈당 출제되는 문제 수 (현재 `10`으로 설정)
 *   `OPTIONS_COUNT`: 각 문제당 보기 개수 (현재 `4`로 설정)
 *   `LEVEL_UP_THRESHOLD_PERCENTAGE`: 퀴즈 통과 기준 정답률 (현재 `70`으로 설정)
+
+## 💡 향후 개선 아이디어
+
+*   다양한 퀴즈 유형 추가 (예: 영어 단어 보고 스펠링 맞추기, 한국어 뜻 보고 영어 단어 입력하기)
+*   사용자 계정 시스템 도입 및 학습 데이터 저장/분석 기능
+*   오답 노트 기능
+*   단어장 관리 기능 (단어 추가/수정/삭제 UI)
+*   타이머 기능 추가
+*   소리 효과 (정답/오답 시)
+*   Tailwind CSS 최적화를 위한 빌드 프로세스 도입 (운영 환경 배포 시)
+
+## 🤝 기여하기
+
+이 프로젝트에 기여하고 싶으시다면 언제든지 환영합니다! 다음 방법으로 기여할 수 있습니다:
+
+1.  이 저장소를 Fork합니다.
+2.  새로운 기능이나 버그 수정을 위한 브랜치를 생성합니다 (`git checkout -b feature/AmazingFeature`).
+3.  변경 사항을 커밋합니다 (`git commit -m 'Add some AmazingFeature'`).
+4.  브랜치에 푸시합니다 (`git push origin feature/AmazingFeature`).
+5.  Pull Request를 생성합니다.
+
+버그를 발견하거나 개선 아이디어가 있다면 언제든지 [Issues](https://github.com/mitmirsein/quiz_ewords/issues) 탭을 통해 알려주세요.
+
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참고해주세요. (만약 `LICENSE` 파일이 없다면, "특별히 지정된 라이선스가 없습니다." 또는 원하는 라이선스를 명시해주세요.)
+Use code with caution.
+위와 같이 수정하시면 GitHub에서 README를 볼 때 데모 사이트 링크가 새 창(탭)에서 열릴 것입니다.
