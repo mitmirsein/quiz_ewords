@@ -8,14 +8,16 @@ const quizViewContainer = document.getElementById('quiz-view-container');
 const resultScreenContainer = document.getElementById('result-screen-container');
 const resetProgressButton = document.getElementById('reset-progress-button');
 
-const currentLevelDisplay = document.getElementById('current-level-display');
-const scoreDisplay = document.getElementById('score-display');
-const progressBar = document.getElementById('progress-bar');
-const questionNumberDisplay = document.getElementById('question-number-display');
-const questionTextElement = document.getElementById('question-text');
-const optionsGrid = document.getElementById('options-grid');
-const feedbackMessageElement = document.getElementById('feedback-message');
-const nextQuestionButton = document.getElementById('next-question-button');
+// quizViewContainer 내부 요소들은 renderQuestion 또는 startQuiz에서 필요시 다시 찾거나,
+// DOM 재생성 시 참조를 갱신해야 합니다.
+let currentLevelDisplay;
+let scoreDisplay;
+let progressBar;
+let questionNumberDisplay;
+let questionTextElement;
+let optionsGrid;
+let feedbackMessageElement;
+// let nextQuestionButton; // 이벤트 위임으로 처리하므로, 전역 참조는 필수 아님
 
 const resultTitle = document.getElementById('result-title');
 const resultLevel = document.getElementById('result-level');
@@ -34,7 +36,7 @@ let currentQuizLevel = null;
 let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let unlockedLevels = new Set(); // loadProgress에서 모든 레벨을 추가할 예정
+let unlockedLevels = new Set();
 let isAnswered = false;
 
 // --- SVG 아이콘 ---
@@ -68,7 +70,7 @@ function renderLevelSelector() {
 
     LEVEL_ORDER.forEach(levelName => {
         const button = document.createElement('button');
-        button.textContent = levelName; // 텍스트만 설정
+        button.textContent = levelName;
         button.classList.add('level-button');
 
         if (levelName === DifficultyLevel.BEGINNER) button.classList.add('beginner');
@@ -76,7 +78,6 @@ function renderLevelSelector() {
         else if (levelName === DifficultyLevel.ADVANCED) button.classList.add('advanced');
         
         button.onclick = () => selectLevel(levelName);
-
         levelButtonsWrapper.appendChild(button);
     });
 }
@@ -87,52 +88,34 @@ function selectLevel(level) {
     startQuiz();
 }
 
+let initialQuizViewHTML = ''; // 퀴즈 화면 초기 HTML 저장용
+
 function startQuiz() {
     showScreen(quizViewContainer);
-    
-    // 퀴즈 화면의 기본 구조가 있는지 확인하고, 없다면 (예: 이전 오류로 인해 내용이 변경된 경우)
-    // 원래의 퀴즈 화면 구조로 복원하거나, 오류 메시지를 표시합니다.
-    // quizViewContainer 내부에 특정 ID를 가진 요소가 있는지 확인하는 것이 더 견고할 수 있습니다.
-    const quizElementsExist = document.getElementById('question-card') && 
-                              document.getElementById('options-grid') &&
-                              document.getElementById('feedback-message') &&
-                              document.getElementById('next-question-button');
 
-    if (!quizElementsExist) {
-        // quizViewContainer의 내용을 원래 HTML 구조로 다시 설정합니다.
-        // 이 부분은 index.html의 quiz-view-container 내부 구조와 동일해야 합니다.
-        quizViewContainer.innerHTML = `
-            <div class="flex justify-between items-center mb-2 text-slate-600">
-                <span id="current-level-display" class="text-lg font-semibold"></span>
-                <span id="score-display" class="text-lg font-semibold"></span>
-            </div>
-            <div id="progress-bar-container" class="w-full bg-slate-200 rounded-full h-3 md:h-4 overflow-hidden shadow-inner mb-1">
-                <div id="progress-bar" class="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full transition-all duration-300 ease-out" style="width: 0%;"></div>
-            </div>
-            <p id="question-number-display" class="text-xs text-slate-500 text-right mb-4"></p>
-            <div id="question-card" class="p-2 bg-slate-50 rounded-lg">
-                <h3 id="question-text" class="text-2xl md:text-3xl font-bold text-center text-slate-800 mb-2"></h3>
-                <p class="text-center text-slate-500 mb-6 md:mb-8">위 영어 단어의 뜻으로 알맞은 것은?</p>
-                <div id="options-grid" class="grid grid-cols-2 gap-3 md:gap-4"></div>
-            </div>
-            <div id="feedback-message" class="mt-6 p-3 rounded-md text-center font-semibold text-sm" style="display:none;"></div>
-            <button id="next-question-button" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2" style="display:none;">다음 문제로</button>
-        `;
-        // HTML 요소 참조를 다시 설정해야 할 수 있습니다. (위에서 전역으로 선언했으므로, DOM 재생성 후에는 다시 찾아야 함)
-        // 하지만 여기서는 일단 renderQuestion에서 해당 요소들에 접근하므로, 그 전에 DOM이 생성되도록 합니다.
-        // 더 나은 방법은 initializeApp에서 초기 HTML 구조를 문자열로 저장해두고 필요시 사용하는 것입니다.
+    if (initialQuizViewHTML) {
+        quizViewContainer.innerHTML = initialQuizViewHTML;
+        // quizViewContainer 내용이 복원되었으므로, 내부 요소들에 대한 참조를 갱신
+        reassignQuizViewElements();
+    } else {
+        // initialQuizViewHTML이 비어있다면 initializeApp에서 제대로 저장되지 않은 것이므로,
+        // 현재 DOM 구조가 올바른지 확인하고, 아니라면 여기서라도 필수 구조를 만들어야 함.
+        // 하지만 initializeApp에서 저장하는 것이 더 바람직.
+        // 여기서는 initializeApp에서 initialQuizViewHTML이 설정되었다고 가정.
+        // 만약 initializeApp에서 실패했다면 reassignQuizViewElements() 호출 전에
+        // quizViewContainer.innerHTML에 기본 구조를 넣어주는 fallback 로직 필요.
+        ensureQuizViewStructure(); // 필수 구조 확인 및 복원 (initialQuizViewHTML 사용)
     }
 
-
     const levelWords = WORDS_DATA.filter(word => word.level === currentQuizLevel);
+    // 중요: QUESTIONS_PER_QUIZ가 words.js에서 제대로 로드되었는지 확인
+    console.log(`[DEBUG] startQuiz: typeof QUESTIONS_PER_QUIZ = ${typeof QUESTIONS_PER_QUIZ}, value = ${QUESTIONS_PER_QUIZ}`);
     currentQuestions = shuffleArray(levelWords).slice(0, QUESTIONS_PER_QUIZ);
 
+    console.log(`[DEBUG] startQuiz: currentQuestions.length = ${currentQuestions.length}`);
+
     if (currentQuestions.length === 0) {
-        // quizViewContainer 내용을 변경하여 오류 메시지 표시
-        // (이전 오류 메시지 표시 코드가 이미 quizViewContainer 내용을 덮어썼을 수 있으므로,
-        //  위에서 quizElementsExist 체크 후 복원하는 로직과 함께 고려)
-        const qc = document.getElementById('quiz-view-container'); // 이미 전역 변수 사용 가능
-        qc.innerHTML = `
+        quizViewContainer.innerHTML = `
             <div class="text-center p-4">
                 <p class="text-red-500 mb-4">이 레벨(${currentQuizLevel})에 대한 문제가 충분하지 않습니다. <br/>words.js 파일에 단어를 추가해주세요.</p>
                 <button onclick="renderLevelSelector()" class="level-button bg-slate-500 hover:bg-slate-600 focus:ring-slate-400">레벨 선택으로 돌아가기</button>
@@ -142,52 +125,84 @@ function startQuiz() {
     
     currentQuestionIndex = 0;
     score = 0;
-    renderQuestion(); // 이제 정상적으로 퀴즈 렌더링
+    renderQuestion();
 }
+
+// quizViewContainer 내부의 주요 요소들이 있는지 확인하고, 없으면 초기 HTML로 복원
+function ensureQuizViewStructure() {
+    if (!document.getElementById('question-card')) { // 주요 요소 중 하나만 체크
+        console.warn("[DEBUG] Quiz view structure seems missing or incomplete. Restoring from initial HTML.");
+        if (initialQuizViewHTML) {
+            quizViewContainer.innerHTML = initialQuizViewHTML;
+            reassignQuizViewElements(); // DOM 재생성 후 참조 갱신
+        } else {
+            console.error("[DEBUG] initialQuizViewHTML is not set. Cannot restore quiz view structure.");
+            // 비상: 사용자에게 오류 알리고 레벨 선택으로 유도
+            quizViewContainer.innerHTML = `<div class="text-center p-4"><p class="text-red-500">퀴즈 화면 로드 오류. 레벨을 다시 선택해주세요.</p><button onclick="renderLevelSelector()" class="level-button bg-slate-500 hover:bg-slate-600 focus:ring-slate-400 mt-2">레벨 선택</button></div>`;
+        }
+    } else {
+        // 이미 구조가 있다면, 참조만 갱신 (선택적, 이미 전역 변수들이 최신 DOM을 가리키고 있다면 불필요)
+        reassignQuizViewElements();
+    }
+}
+
+// quizViewContainer 내부의 전역 변수 DOM 요소 참조를 갱신하는 함수
+function reassignQuizViewElements() {
+    currentLevelDisplay = document.getElementById('current-level-display');
+    scoreDisplay = document.getElementById('score-display');
+    progressBar = document.getElementById('progress-bar');
+    questionNumberDisplay = document.getElementById('question-number-display');
+    questionTextElement = document.getElementById('question-text');
+    optionsGrid = document.getElementById('options-grid');
+    feedbackMessageElement = document.getElementById('feedback-message');
+    // nextQuestionButton은 이벤트 위임으로 처리하므로, 여기서의 전역 참조는 덜 중요함.
+    // 필요하다면: nextQuestionButton = document.getElementById('next-question-button');
+    console.log("[DEBUG] Quiz view elements reassigned.");
+}
+
 
 function renderQuestion() {
     isAnswered = false;
-    
-    // HTML 요소들이 제대로 참조되는지 확인 (startQuiz에서 DOM이 재생성되었을 수 있으므로)
-    // 전역 변수로 선언된 요소들을 이 함수 범위에서 다시 할당할 필요는 없지만,
-    // 만약 startQuiz에서 DOM 구조가 완전히 바뀐다면, 해당 요소들에 대한 참조가 유효한지 확인해야 함.
-    // 현재 구조에서는 renderQuestion 호출 시점에는 quizViewContainer 내부 요소들이 존재한다고 가정.
-    const feedbackMsgEl = document.getElementById('feedback-message');
-    const nextQBtn = document.getElementById('next-question-button');
-    const optsGrid = document.getElementById('options-grid');
-    const qTextEl = document.getElementById('question-text');
-    const currLvlDisplay = document.getElementById('current-level-display');
-    const scrDisplay = document.getElementById('score-display');
-    const progBar = document.getElementById('progress-bar');
-    const qNumDisplay = document.getElementById('question-number-display');
 
-
-    if (!feedbackMsgEl || !nextQBtn || !optsGrid || !qTextEl || !currLvlDisplay || !scrDisplay || !progBar || !qNumDisplay) {
-        console.error("Quiz elements are missing. Cannot render question.");
-        // 사용자에게 오류를 알리거나 레벨 선택 화면으로 돌아가도록 처리
-        quizViewContainer.innerHTML = `<p class="text-red-500 text-center">퀴즈를 표시하는 데 문제가 발생했습니다. 레벨을 다시 선택해주세요.</p><button onclick="renderLevelSelector()" class="level-button bg-slate-500 hover:bg-slate-600 focus:ring-slate-400 mt-4">레벨 선택</button>`;
-        return;
+    // ensureQuizViewStructure() 호출로 요소들이 준비되었는지 확인 후 진행
+    // 또는, reassignQuizViewElements()가 startQuiz에서 이미 호출되었다면 여기서 생략 가능
+    // 여기서는 renderQuestion이 독립적으로 호출될 수도 있다고 가정하고, 참조 확인
+    if (!questionTextElement || !optionsGrid || !feedbackMessageElement ) {
+        console.error("[DEBUG] renderQuestion: One or more critical UI elements are null. Attempting to reassign.");
+        reassignQuizViewElements(); // 참조 재시도
+        if (!questionTextElement || !optionsGrid || !feedbackMessageElement ) {
+            console.error("[DEBUG] renderQuestion: Reassign failed. Aborting render.");
+             quizViewContainer.innerHTML = `<div class="text-center p-4"><p class="text-red-500">퀴즈 표시 오류. 레벨을 다시 선택해주세요.</p><button onclick="renderLevelSelector()" class="level-button bg-slate-500 hover:bg-slate-600 focus:ring-slate-400 mt-2">레벨 선택</button></div>`;
+            return;
+        }
     }
 
-
-    feedbackMsgEl.style.display = 'none';
-    feedbackMsgEl.textContent = '';
-    feedbackMsgEl.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm'; // Reset class
-    nextQBtn.style.display = 'none';
-    optsGrid.innerHTML = '';
+    console.log(`[DEBUG] renderQuestion: currentQuestionIndex = ${currentQuestionIndex}, currentQuestions.length = ${currentQuestions.length}`);
 
     if (currentQuestionIndex >= currentQuestions.length) {
+        console.log("[DEBUG] All questions answered. Rendering result screen.");
         renderResultScreen();
         return;
     }
 
+    feedbackMessageElement.style.display = 'none';
+    feedbackMessageElement.textContent = '';
+    feedbackMessageElement.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm';
+    
+    // nextQuestionButton은 이벤트 위임으로 처리되므로, 직접 참조하여 display none 하는 부분은
+    // initializeApp에서 설정한 이벤트 핸들러가 있는 버튼(#next-question-button)을 찾아야 함
+    const actualNextButton = document.getElementById('next-question-button');
+    if(actualNextButton) actualNextButton.style.display = 'none';
+
+    optionsGrid.innerHTML = '';
+
     const questionData = currentQuestions[currentQuestionIndex];
-    qTextEl.textContent = `"${questionData.english}"`;
-    currLvlDisplay.textContent = `${currentQuizLevel} 퀴즈`;
-    scrDisplay.textContent = `점수: ${score} / ${currentQuestions.length}`;
+    questionTextElement.textContent = `"${questionData.english}"`;
+    currentLevelDisplay.textContent = `${currentQuizLevel} 퀴즈`;
+    scoreDisplay.textContent = `점수: ${score} / ${currentQuestions.length}`;
     const progressPercent = ((currentQuestionIndex + 1) / currentQuestions.length) * 100;
-    progBar.style.width = `${progressPercent}%`;
-    qNumDisplay.textContent = `문제 ${currentQuestionIndex + 1} / ${currentQuestions.length}`;
+    progressBar.style.width = `${progressPercent}%`;
+    questionNumberDisplay.textContent = `문제 ${currentQuestionIndex + 1} / ${currentQuestions.length}`;
 
     const options = generateOptions(questionData);
     options.forEach(optionText => {
@@ -195,7 +210,7 @@ function renderQuestion() {
         optionButton.innerHTML = `<span>${optionText}</span>`; 
         optionButton.classList.add('quiz-option-button', 'default', 'relative'); 
         optionButton.onclick = (event) => handleAnswer(event.currentTarget, optionText, questionData.korean);
-        optsGrid.appendChild(optionButton);
+        optionsGrid.appendChild(optionButton);
     });
 }
 
@@ -230,11 +245,18 @@ function handleAnswer(selectedButton, selectedAnswer, correctAnswer) {
     if (isAnswered) return;
     isAnswered = true;
     
-    const feedbackMsgEl = document.getElementById('feedback-message'); // Ensure it's the current one
-    const nextQBtn = document.getElementById('next-question-button');   // Ensure it's the current one
-    const optsGrid = document.getElementById('options-grid');           // Ensure it's the current one
+    // DOM 요소 참조 갱신 (만약을 위해)
+    const currentFeedbackMessageElement = document.getElementById('feedback-message');
+    const currentNextQuestionButton = document.getElementById('next-question-button');
+    const currentOptionsGrid = document.getElementById('options-grid');
 
-    const optionButtons = Array.from(optsGrid.children);
+    if (!currentFeedbackMessageElement || !currentNextQuestionButton || !currentOptionsGrid) {
+        console.error("[DEBUG] handleAnswer: Critical UI elements not found.");
+        return;
+    }
+
+
+    const optionButtons = Array.from(currentOptionsGrid.children);
     optionButtons.forEach(btn => {
         btn.classList.add('answered'); 
         btn.onclick = null;
@@ -261,33 +283,23 @@ function handleAnswer(selectedButton, selectedAnswer, correctAnswer) {
     if (selectedAnswer === correctAnswer) {
         score++;
         feedbackIcon = svgIconCheckCircleLarge.replace('class="w-8 h-8 text-green-500"', 'class="w-6 h-6 text-green-600 mr-2 inline-block"');
-        feedbackMsgEl.innerHTML = `${feedbackIcon} 정답입니다! 🎉`;
-        feedbackMsgEl.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm bg-green-100 text-green-700 flex items-center justify-center';
+        currentFeedbackMessageElement.innerHTML = `${feedbackIcon} 정답입니다! 🎉`;
+        currentFeedbackMessageElement.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm bg-green-100 text-green-700 flex items-center justify-center';
     } else {
         feedbackIcon = svgIconXCircleLarge.replace('class="w-8 h-8 text-red-500"', 'class="w-6 h-6 text-red-600 mr-2 inline-block"');
-        feedbackMsgEl.innerHTML = `${feedbackIcon} 오답입니다. 정답: ${correctAnswer}`;
-        feedbackMsgEl.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm bg-red-100 text-red-700 flex items-center justify-center';
+        currentFeedbackMessageElement.innerHTML = `${feedbackIcon} 오답입니다. 정답: ${correctAnswer}`;
+        currentFeedbackMessageElement.className = 'mt-6 p-3 rounded-md text-center font-semibold text-sm bg-red-100 text-red-700 flex items-center justify-center';
     }
-    feedbackMsgEl.style.display = 'flex'; 
-    nextQBtn.style.display = 'block';
+    currentFeedbackMessageElement.style.display = 'flex'; 
+    currentNextQuestionButton.style.display = 'block';
+
     if (currentQuestionIndex >= currentQuestions.length - 1) {
-        nextQBtn.textContent = '결과 보기';
+        currentNextQuestionButton.textContent = '결과 보기';
     } else {
-        nextQBtn.textContent = '다음 문제로';
+        currentNextQuestionButton.textContent = '다음 문제로';
     }
 }
 
-document.getElementById('next-question-button').onclick = () => { // 이 참조는 DOM 로드 시점에 한번 설정되므로, quizViewContainer가 재생성되면 문제가 될 수 있음.
-                                                                  // 이벤트 위임이나, 함수 내에서 매번 요소를 찾는 것이 더 안전.
-                                                                  // 여기서는 일단 유지하되, startQuiz에서 quizViewContainer가 재생성되는 경우를 위해
-                                                                  // nextQuestionButton 참조를 startQuiz 또는 renderQuestion 내부에서 갱신하는 것을 고려.
-                                                                  // 또는 initializeApp에서 이벤트 리스너를 설정.
-    currentQuestionIndex++;
-    renderQuestion();
-};
-// 위 nextQuestionButton.onclick 핸들러를 initializeApp 내부로 옮기는 것이 더 안전합니다.
-
-// --- 결과 화면 ---
 function renderResultScreen() {
     showScreen(resultScreenContainer);
     const percentage = currentQuestions.length > 0 ? (score / currentQuestions.length) * 100 : 0;
@@ -325,7 +337,6 @@ function renderResultScreen() {
     backToLevelsButton.onclick = renderLevelSelector;
 }
 
-// --- 진행 상황 관리 ---
 function loadProgress() {
     if (LEVEL_ORDER.length > 0) {
         unlockedLevels = new Set(LEVEL_ORDER);
@@ -339,9 +350,6 @@ function saveProgress() {
     localStorage.setItem('simpleQuizUnlockedLevels', JSON.stringify(Array.from(unlockedLevels)));
 }
 
-// resetProgressButton 이벤트 핸들러는 initializeApp에서 설정하는 것이 좋습니다.
-// resetProgressButton.onclick = ...
-
 // --- 앱 시작 ---
 function initializeApp() {
     if (typeof WORDS_DATA === 'undefined' || typeof LEVEL_ORDER === 'undefined') {
@@ -349,23 +357,19 @@ function initializeApp() {
         console.error("WORDS_DATA or LEVEL_ORDER is missing. Check words.js loading and content.");
         return;
     }
-
-    // quizViewContainer의 초기 HTML 구조를 저장 (선택적, startQuiz에서 DOM 재생성 시 사용)
-    // const initialQuizViewHTML = quizViewContainer.innerHTML; 
-
-    // next-question-button 이벤트 핸들러 설정
-    // 전역 변수로 이미 선언된 nextQuestionButton 사용.
-    // 만약 quizViewContainer가 동적으로 완전히 재생성되는 경우가 있다면,
-    // 이 버튼에 대한 참조가 유효한지 확인하거나, 이벤트 위임을 사용해야 함.
-    // 현재 startQuiz에서 quizViewContainer.innerHTML을 덮어쓰는 경우가 있으므로 주의 필요.
-    // 가장 안전한 방법은 quizViewContainer에 이벤트 리스너를 달고, #next-question-button 클릭을 감지하는 것(이벤트 위임)
-    // 또는 renderQuestion 할 때마다 이벤트 리스너를 새로 할당.
-    // 여기서는 initializeApp에서 한번만 설정. startQuiz에서 DOM 재생성 시 이 핸들러가 유실될 수 있음.
-    // -> 수정: nextQuestionButton 이벤트 핸들러를 quizViewContainer에 위임하거나 renderQuestion에서 재할당.
-    //    여기서는 간단하게, quizViewContainer에 이벤트 리스너 추가하여 위임.
+    
+    const tempQuizViewContainer = document.getElementById('quiz-view-container');
+    if (tempQuizViewContainer) {
+        initialQuizViewHTML = tempQuizViewContainer.innerHTML;
+        console.log("[DEBUG] Initial quiz view HTML saved.");
+    } else {
+        console.error("[DEBUG] initializeApp: quiz-view-container not found. Cannot save initial HTML.");
+    }
+    reassignQuizViewElements(); // 앱 시작 시 전역 참조 설정
 
     quizViewContainer.addEventListener('click', function(event) {
         if (event.target && event.target.id === 'next-question-button') {
+            console.log("[DEBUG] Next question button clicked via event delegation.");
             currentQuestionIndex++;
             renderQuestion();
         }
@@ -385,7 +389,6 @@ function initializeApp() {
             }, 3000);
         }
     };
-
 
     loadProgress(); 
     renderLevelSelector();
