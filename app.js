@@ -1,13 +1,20 @@
 // app.js
 
 // --- HTML 요소 참조 ---
-// 이 요소들은 앱의 생명주기 동안 단 한 번만 참조되므로, 최상단에 둡니다.
 const appContainer = document.getElementById('app-container');
 const levelSelectorContainer = document.getElementById('level-selector-container');
 const levelButtonsWrapper = document.getElementById('level-buttons-wrapper');
 const quizViewContainer = document.getElementById('quiz-view-container');
 const resultScreenContainer = document.getElementById('result-screen-container');
 const resetProgressButton = document.getElementById('reset-progress-button');
+
+// NEW: 퀴즈 모드 선택 관련 UI 요소들
+const quizModeSelector = document.getElementById('quiz-mode-selector');
+const selectedLevelQuizModeText = document.getElementById('selected-level-quiz-mode-text');
+const startRandomQuizButton = document.getElementById('start-random-quiz-button');
+const startIncorrectQuizButton = document.getElementById('start-incorrect-quiz-button');
+const backToLevelSelectButton = document.getElementById('back-to-level-select-button');
+
 
 // 퀴즈 뷰 내부 요소들은 quizViewContainer.innerHTML이 재설정될 수 있으므로
 // renderQuestion() 또는 startQuiz() 진입 시 다시 참조를 갱신해야 합니다.
@@ -39,7 +46,22 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let unlockedLevels = new Set();
+
+// NEW: 정답 맞춘 문제와 틀린 문제 ID를 관리
+let answeredCorrectlyWordIdsByLevel = {}; // { '초급': Set<string>, '중급': Set<string> } - 이전에 정답을 맞춘 문제 ID
+let incorrectWordIdsByLevel = {};       // { '초급': Set<string>, '중급': Set<string> } - 이전에 틀렸던 문제 ID
+
 let isAnswered = false; // 사용자가 현재 질문에 답했는지 여부
+
+// NEW: 퀴즈 모드 상수 및 현재 퀴즈 모드 변수
+const QuizMode = {
+    RANDOM: 'random',
+    INCORRECT_ONLY: 'incorrect_only'
+};
+let currentQuizMode = QuizMode.RANDOM; // 기본 모드 설정
+
+// NEW: 퀴즈 모드 선택 시 저장할 레벨
+let selectedLevelForQuizMode = null; 
 
 // --- SVG 아이콘 (템플릿 리터럴용) ---
 const svgIconCheck = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>`;
@@ -62,6 +84,8 @@ function showScreen(screenToShow) {
     levelSelectorContainer.style.display = 'none';
     quizViewContainer.style.display = 'none';
     resultScreenContainer.style.display = 'none';
+    quizModeSelector.style.display = 'none'; // 퀴즈 모드 선택 UI도 숨김
+
     screenToShow.style.display = 'block';
 }
 
@@ -69,45 +93,74 @@ function showScreen(screenToShow) {
 function renderLevelSelector() {
     showScreen(levelSelectorContainer);
     levelButtonsWrapper.innerHTML = ''; // 기존 버튼 모두 제거
+    levelButtonsWrapper.style.display = 'flex'; // 레벨 버튼 래퍼 다시 표시
 
     LEVEL_ORDER.forEach(levelName => {
         const button = document.createElement('button');
         let levelText = '';
-        let levelClass = ''; // For specific gradient classes like btn-primary
-
-        // sample.html의 버튼 텍스트와 클래스 매핑
+        let levelClass = ''; 
+        
         if (levelName === DifficultyLevel.BEGINNER) {
             levelText = '🌟 초급 (Level 1)';
-            levelClass = 'btn-primary'; // btn-primary는 스타일 시트에서 배경 그라디언트와 효과 정의
+            levelClass = 'btn-primary'; 
         } else if (levelName === DifficultyLevel.INTERMEDIATE) {
             levelText = '⚡ 중급 (Level 2)';
-            levelClass = 'btn-secondary'; // btn-secondary
+            levelClass = 'btn-secondary'; 
         } else if (levelName === DifficultyLevel.ADVANCED) {
             levelText = '🔥 고급 (Level 3)';
-            levelClass = 'btn-success'; // btn-success
+            levelClass = 'btn-success'; 
         } else {
-            levelText = levelName; // Fallback for other levels
-            levelClass = 'btn-primary'; // Default styling if no specific class
+            levelText = levelName; 
+            levelClass = 'btn-primary'; 
         }
 
         button.innerHTML = levelText;
-        // level-button 클래스는 animation-delay를 위해 필요
         button.classList.add('level-button', levelClass, 'text-white', 'font-bold', 'py-4', 'px-8', 'rounded-2xl', 'text-xl', 'shadow-xl'); 
         
-        // 애니메이션 딜레이를 위한 nth-child(index + 1)와 동일한 효과 적용
-        // `level-button` CSS 규칙에 `animation-delay`가 `nth-child`로 이미 정의되어 있으므로, 여기에 추가적인 인라인 스타일은 필요 없습니다.
-        
-        button.onclick = () => selectLevel(levelName);
+        button.onclick = () => showQuizModeSelector(levelName); 
         levelButtonsWrapper.appendChild(button);
     });
 }
 
-// 퀴즈 뷰의 초기 HTML을 저장합니다.
-// 앱 시작 시 단 한 번만 실행되어야 합니다.
+// NEW: 퀴즈 모드 선택 화면을 보여주는 함수
+function showQuizModeSelector(level) {
+    selectedLevelForQuizMode = level; // 선택된 레벨 저장
+    
+    // 레벨 선택 화면은 유지하되, 레벨 버튼을 숨기고 퀴즈 모드 선택기를 표시
+    levelButtonsWrapper.style.display = 'none'; 
+    quizModeSelector.style.display = 'block';
+
+    selectedLevelQuizModeText.textContent = `'${level}' 레벨 퀴즈 모드 선택`;
+
+    const incorrectWordsCount = incorrectWordIdsByLevel[level] ? incorrectWordIdsByLevel[level].size : 0;
+    startIncorrectQuizButton.textContent = `📝 오답 노트 풀기 (${incorrectWordsCount}개)`;
+    startIncorrectQuizButton.disabled = incorrectWordsCount === 0; // 오답이 없으면 비활성화
+    if (incorrectWordsCount === 0) {
+        startIncorrectQuizButton.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        startIncorrectQuizButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    // 버튼 이벤트 리스너 연결
+    startRandomQuizButton.onclick = () => {
+        currentQuizMode = QuizMode.RANDOM;
+        selectLevel(selectedLevelForQuizMode);
+    };
+    startIncorrectQuizButton.onclick = () => {
+        currentQuizMode = QuizMode.INCORRECT_ONLY;
+        selectLevel(selectedLevelForQuizMode);
+    };
+    backToLevelSelectButton.onclick = () => {
+        levelButtonsWrapper.style.display = 'flex'; // 레벨 버튼 다시 표시
+        quizModeSelector.style.display = 'none'; // 모드 선택기 숨기기
+    };
+}
+
+
+// 퀴즈 뷰의 초기 HTML을 저장합니다. (앱 시작 시 단 한 번만 실행)
 let initialQuizViewHTML = ''; 
 
 // quizViewContainer 내부의 전역 변수 DOM 요소 참조를 갱신하는 함수
-// HTML 구조가 innerHTML로 다시 그려진 후 반드시 호출되어야 합니다.
 function reassignQuizViewElements() {
     currentLevelDisplay = document.getElementById('current-level-display');
     scoreDisplay = document.getElementById('score-display');
@@ -122,26 +175,24 @@ function reassignQuizViewElements() {
 
 // quizViewContainer의 구조가 손상되었을 때 초기 HTML로 복원하는 함수
 function ensureQuizViewStructure() {
-    if (!document.getElementById('question-text')) { // 주요 요소가 없다면 구조가 손상되었다고 판단
+    if (!document.getElementById('question-text')) {
         console.warn("[DEBUG] Quiz view structure seems missing or incomplete. Restoring from initial HTML.");
         if (initialQuizViewHTML) {
             quizViewContainer.innerHTML = initialQuizViewHTML;
-            reassignQuizViewElements(); // DOM 재생성 후 참조 갱신
+            reassignQuizViewElements(); 
         } else {
             console.error("[DEBUG] initialQuizViewHTML is not set. Cannot restore quiz view structure. This should not happen if initializeApp ran correctly.");
-            // 비상 상황: 사용자에게 오류 알림
             quizViewContainer.innerHTML = `
                 <div class="text-center p-4 text-white">
                     <p class="text-red-300">퀴즈 화면 로드 오류. 레벨을 다시 선택해주세요.</p>
-                    <button onclick="renderLevelSelector()" class="btn-primary mt-4">레벨 선택</button>
+                    <button onclick="renderLevelSelector()" class="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-md">레벨 선택</button>
                 </div>`;
-            return false; // 복원 실패 알림
+            return false;
         }
     } else {
-        // 이미 구조가 있다면, 참조만 갱신 (항상 안전하게 호출)
         reassignQuizViewElements();
     }
-    return true; // 복원 성공 또는 이미 존재함
+    return true;
 }
 
 
@@ -154,23 +205,71 @@ function selectLevel(level) {
 function startQuiz() {
     showScreen(quizViewContainer);
 
-    // 퀴즈 뷰의 DOM 구조가 제대로 준비되었는지 확인 (innerHTML 변경 후 필수)
     if (!ensureQuizViewStructure()) {
-        return; // 구조 복원 실패 시 더 이상 진행하지 않음
+        return; 
     }
+    
+    let wordsToChooseFrom = []; // 선택 가능한 단어 목록
 
-    const levelWords = WORDS_DATA.filter(word => word.level === currentQuizLevel);
-    // 충분한 단어가 있는지 확인하고, 없으면 오류 메시지 표시
-    if (levelWords.length < QUESTIONS_PER_QUIZ) {
+    if (currentQuizMode === QuizMode.INCORRECT_ONLY) {
+        // 오답 노트 퀴즈 모드
+        // incorrectWordIdsByLevel[currentQuizLevel]이 Set이 아니거나 없을 수 있으므로 빈 Set으로 기본값 지정
+        const currentIncorrectIds = incorrectWordIdsByLevel[currentQuizLevel] || new Set();
+
+        wordsToChooseFrom = Array.from(currentIncorrectIds)
+                               .map(id => WORDS_DATA.find(word => word.id === id))
+                               .filter(word => word !== undefined); // 존재하지 않는 ID로 인한 undefined 제거
+        
+        console.log(`[DEBUG] Incorrect words for ${currentQuizLevel}:`, wordsToChooseFrom.length);
+
+        if (wordsToChooseFrom.length === 0) {
+            quizViewContainer.innerHTML = `
+                <div class="text-center p-4 text-white">
+                    <p class="mb-4">이 레벨(${currentQuizLevel})에는 현재 틀린 문제가 없습니다. <br/>랜덤 퀴즈에서 문제를 풀거나 다른 레벨을 선택해주세요.</p>
+                    <button onclick="currentQuizMode = QuizMode.RANDOM; selectLevel('${currentQuizLevel}')" class="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-md">랜덤 퀴즈 시작</button>
+                    <button onclick="renderLevelSelector()" class="glass text-white font-bold py-3 px-6 rounded-xl shadow-md mt-2">레벨 선택으로</button>
+                </div>`;
+            return;
+        }
+
+    } else { // 기본: 랜덤 퀴즈 모드 (QuizMode.RANDOM)
+        const allLevelWords = WORDS_DATA.filter(word => word.level === currentQuizLevel);
+        
+        // answeredCorrectlyWordIdsByLevel[currentQuizLevel]이 Set이 아니거나 없을 수 있으므로 빈 Set으로 기본값 지정
+        const currentAnsweredCorrectlyIds = answeredCorrectlyWordIdsByLevel[currentQuizLevel] || new Set();
+        
+        // 정답을 맞췄던 문제를 제외하고 새로운 문제만 우선적으로 출제
+        let newWords = allLevelWords.filter(word => 
+            !currentAnsweredCorrectlyIds.has(word.id)
+        );
+
+        console.log(`[DEBUG] All words for ${currentQuizLevel}: ${allLevelWords.length}`);
+        console.log(`[DEBUG] Answered correctly for ${currentQuizLevel}: ${currentAnsweredCorrectlyIds.size}`);
+        console.log(`[DEBUG] New words available: ${newWords.length}`);
+
+        // 새로운 문제가 부족하면 이미 정답 맞췄던 문제도 포함
+        if (newWords.length < QUESTIONS_PER_QUIZ) {
+            console.warn(`[DEBUG] Not enough new words (${newWords.length}) for ${QUESTIONS_PER_QUIZ} questions. Reusing answered words.`);
+            wordsToChooseFrom = allLevelWords; // 모든 단어를 다시 포함
+            // 사용자에게 알림을 줄 수도 있습니다: "새로운 문제가 모두 소진되어, 이전에 맞췄던 문제가 포함됩니다."
+        } else {
+            wordsToChooseFrom = newWords;
+        }
+    }
+    
+    currentQuestions = shuffleArray(wordsToChooseFrom).slice(0, QUESTIONS_PER_QUIZ);
+    console.log(`[DEBUG] Final questions for quiz: ${currentQuestions.length}`);
+
+    // 최종적으로 문제가 0개일 경우 처리
+    if (currentQuestions.length === 0) {
         quizViewContainer.innerHTML = `
             <div class="text-center p-4 text-white">
-                <p class="text-red-300 mb-4">이 레벨(${currentQuizLevel})에는 문제가 충분하지 않습니다. (최소 ${QUESTIONS_PER_QUIZ}개 필요)</p>
+                <p class="text-red-300 mb-4">선택하신 레벨(${currentQuizLevel})에 출제할 문제가 현재 없습니다. <br/>words.js 파일에 단어를 추가하거나, 진행 상황을 초기화해보세요.</p>
                 <button onclick="renderLevelSelector()" class="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-md">레벨 선택으로 돌아가기</button>
             </div>`;
         return;
     }
-
-    currentQuestions = shuffleArray(levelWords).slice(0, QUESTIONS_PER_QUIZ);
+    
     currentQuestionIndex = 0;
     score = 0;
     renderQuestion();
@@ -179,21 +278,17 @@ function startQuiz() {
 function renderQuestion() {
     isAnswered = false;
 
-    // 현재 질문 인덱스가 총 질문 수를 초과하면 결과 화면으로 이동
     if (currentQuestionIndex >= currentQuestions.length) {
         renderResultScreen();
         return;
     }
 
-    // 피드백 메시지 숨김 및 초기화
     feedbackMessageElement.style.display = 'none';
-    feedbackMessageElement.className = 'text-white p-4 rounded-2xl text-center font-bold text-lg shadow-xl'; // 기본 클래스로 리셋
+    feedbackMessageElement.className = 'text-white p-4 rounded-2xl text-center font-bold text-lg shadow-xl'; 
     feedbackMessageElement.innerHTML = '';
     
-    // 다음 문제 버튼 숨김
     nextQuestionButton.style.display = 'none';
 
-    // 옵션 그리드 초기화
     optionsGrid.innerHTML = '';
 
     const questionData = currentQuestions[currentQuestionIndex];
@@ -201,17 +296,14 @@ function renderQuestion() {
     currentLevelDisplay.textContent = `${currentQuizLevel} 퀴즈`;
     scoreDisplay.textContent = `점수: ${score} / ${currentQuestions.length}`;
     
-    // 프로그레스 바 업데이트
-    const progressPercent = ((currentQuestionIndex) / currentQuestions.length) * 100; // 현재 문제 시작 전의 진행률
+    const progressPercent = ((currentQuestionIndex) / currentQuestions.length) * 100;
     progressBar.style.width = `${progressPercent}%`;
     questionNumberDisplay.textContent = `문제 ${currentQuestionIndex + 1} / ${currentQuestions.length}`;
 
-    // 옵션 생성
     const options = generateOptions(questionData);
     options.forEach(optionText => {
         const optionButton = document.createElement('button');
         optionButton.innerHTML = `<span>${optionText}</span>`; 
-        // CSS에서 정의된 .quiz-option-button과 .default 클래스 적용
         optionButton.classList.add('quiz-option-button', 'default'); 
         optionButton.onclick = (event) => handleAnswer(event.currentTarget, optionText, questionData.korean);
         optionsGrid.appendChild(optionButton);
@@ -224,23 +316,21 @@ function generateOptions(correctWord) {
         .filter(word => word.korean !== correctAnswer && word.level === correctWord.level)
         .map(word => word.korean);
 
-    // 같은 레벨에서 충분한 오답이 없다면 다른 레벨에서도 가져옵니다.
     if (distractors.length < OPTIONS_COUNT - 1) {
         const globalDistractors = WORDS_DATA
             .filter(word => word.korean !== correctAnswer && !distractors.includes(word.korean))
             .map(word => word.korean);
-        distractors = [...new Set([...distractors, ...globalDistractors])]; // 중복 제거
+        distractors = [...new Set([...distractors, ...globalDistractors])]; 
     }
 
     distractors = shuffleArray(distractors).slice(0, OPTIONS_COUNT - 1);
 
-    // 그럼에도 부족할 경우 임시 오답을 생성 (최소한의 선택지 보장)
     let tempDistractorCount = 1;
     while (distractors.length < OPTIONS_COUNT - 1) {
         const tempDist = `오답${tempDistractorCount++}`;
         if (tempDist !== correctAnswer && !distractors.includes(tempDist)) {
             distractors.push(tempDist);
-        } else if (tempDistractorCount > 200) { // 무한 루프 방지
+        } else if (tempDistractorCount > 200) { 
             console.warn("Could not generate enough unique distractors. Using generic fallbacks.");
             break; 
         }
@@ -251,59 +341,79 @@ function generateOptions(correctWord) {
 }
 
 function handleAnswer(selectedButton, selectedAnswer, correctAnswer) {
-    if (isAnswered) return; // 이미 답했다면 무시
+    if (isAnswered) return;
     isAnswered = true;
     
     const optionButtons = Array.from(optionsGrid.children);
     optionButtons.forEach(btn => {
-        btn.classList.add('answered'); // 모든 버튼 비활성화 (클릭 방지)
-        btn.onclick = null; // 이벤트 핸들러 제거
-        btn.classList.remove('default'); // 기본 스타일 제거 (hover 효과 등)
+        btn.classList.add('answered'); 
+        btn.onclick = null;
+        btn.classList.remove('default'); 
 
         const textSpan = btn.querySelector('span'); 
         const originalText = textSpan ? textSpan.textContent : btn.textContent; 
         let iconToShow = '';
 
         if (originalText === correctAnswer) { 
-            btn.classList.add('correct'); // 정답 스타일 적용
+            btn.classList.add('correct'); 
             iconToShow = `<span class="absolute right-3 top-1/2 -translate-y-1/2 text-white">${svgIconCheck}</span>`;
-        } else if (btn === selectedButton) { // 선택한 버튼이 오답일 경우
-            btn.classList.add('incorrect'); // 오답 스타일 적용
+        } else if (btn === selectedButton) { 
+            btn.classList.add('incorrect'); 
             iconToShow = `<span class="absolute right-3 top-1/2 -translate-y-1/2 text-white">${svgIconX}</span>`;
-        } else { // 선택하지 않은 오답
+        } else { 
             btn.classList.add('unselected-after-reveal');
         }
-        btn.innerHTML = `<span>${originalText}</span>${iconToShow}`; // 아이콘 추가
+        btn.innerHTML = `<span>${originalText}</span>${iconToShow}`; 
     });
 
-    // 피드백 메시지 표시
+    const currentQuestionId = currentQuestions[currentQuestionIndex].id;
+
     let feedbackIconHTML = '';
     if (selectedAnswer === correctAnswer) {
         score++;
         feedbackIconHTML = `<span class="text-2xl mr-3">${svgIconCheckCircleLarge}</span>`;
         feedbackMessageElement.innerHTML = `<div class="flex items-center justify-center">${feedbackIconHTML}<span>정답입니다! 훌륭해요!</span></div>`;
-        feedbackMessageElement.classList.add('feedback-success'); // style.css의 애니메이션 클래스
+        feedbackMessageElement.classList.add('feedback-success'); 
         feedbackMessageElement.classList.remove('feedback-error');
+
+        // NEW: 정답 맞췄으므로 answeredCorrectly 목록에 추가
+        if (!answeredCorrectlyWordIdsByLevel[currentQuizLevel]) {
+            answeredCorrectlyWordIdsByLevel[currentQuizLevel] = new Set();
+        }
+        answeredCorrectlyWordIdsByLevel[currentQuizLevel].add(currentQuestionId);
+
+        // NEW: 만약 이전에 틀렸던 문제였다면 incorrect 목록에서 제거
+        if (incorrectWordIdsByLevel[currentQuizLevel] && incorrectWordIdsByLevel[currentQuizLevel].has(currentQuestionId)) {
+            incorrectWordIdsByLevel[currentQuizLevel].delete(currentQuestionId);
+        }
+
     } else {
         feedbackIconHTML = `<span class="text-2xl mr-3">${svgIconXCircleLarge}</span>`;
         feedbackMessageElement.innerHTML = `<div class="flex items-center justify-center">${feedbackIconHTML}<span>틀렸습니다. 정답: "${correctAnswer}"</span></div>`;
-        feedbackMessageElement.classList.add('feedback-error'); // style.css의 애니메이션 클래스
+        feedbackMessageElement.classList.add('feedback-error');
         feedbackMessageElement.classList.remove('feedback-success');
+
+        // NEW: 틀렸으므로 incorrect 목록에 추가
+        if (!incorrectWordIdsByLevel[currentQuizLevel]) {
+            incorrectWordIdsByLevel[currentQuizLevel] = new Set();
+        }
+        incorrectWordIdsByLevel[currentQuizLevel].add(currentQuestionId);
     }
     feedbackMessageElement.style.display = 'block'; 
     nextQuestionButton.style.display = 'block';
 
-    // 다음 문제 버튼 텍스트 업데이트
     const nextButtonTextSpan = nextQuestionButton.querySelector('span');
     const nextButtonSvg = nextQuestionButton.querySelector('svg');
 
     if (currentQuestionIndex >= currentQuestions.length - 1) {
         nextButtonTextSpan.textContent = '결과 보기';
-        nextButtonSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />`; // 다른 아이콘으로 변경
+        nextButtonSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />`; 
     } else {
         nextButtonTextSpan.textContent = '다음 문제로';
-        nextButtonSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>`; // 원래 아이콘
+        nextButtonSvg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>`; 
     }
+
+    saveProgress(); // 답을 제출할 때마다 진행 상황 저장
 }
 
 function renderResultScreen() {
@@ -315,9 +425,8 @@ function renderResultScreen() {
     resultPercentage.textContent = `${percentage.toFixed(0)}%`;
     resultScore.textContent = `${score} / ${currentQuestions.length} 문제 정답`;
 
-    // 결과 디테일 카드에 유리모피즘 + 피드백 효과 적용
-    resultDetails.classList.remove('feedback-success', 'feedback-error'); // 기존 피드백 클래스 제거
-    resultDetails.classList.add('glass'); // 기본 유리모피즘
+    resultDetails.classList.remove('feedback-success', 'feedback-error'); 
+    resultDetails.classList.add('glass'); 
     if (passed) {
         resultDetails.classList.add('feedback-success');
         resultPercentage.classList.add('text-white'); 
@@ -328,45 +437,44 @@ function renderResultScreen() {
         resultScore.classList.add('text-white/80');
     }
 
-    // 결과 메시지 아이콘 및 텍스트 설정
     resultMessageIcon.innerHTML = passed ? svgIconCheckCircleLarge : svgIconXCircleLarge;
-    // 아이콘 색상은 CSS에서 `.feedback-success` 또는 `.feedback-error` 내의 SVG 컬러로 정의될 수 있음.
-    // 여기서는 `text-white`로 통일 (부모 요소의 텍스트 색상 따름).
-    resultMessage.classList.remove('text-green-700', 'text-red-700'); // 기존 색상 클래스 제거
-    resultMessage.classList.add('text-white'); // 메인 텍스트 색상 유지 (sample.html의 `text-white` 반영)
+    resultMessage.classList.remove('text-green-700', 'text-red-700'); 
+    resultMessage.classList.add('text-white'); 
 
     resultMessageText.textContent = passed ? '축하합니다! 레벨을 통과했습니다.' : `아쉬워요! (${LEVEL_UP_THRESHOLD_PERCENTAGE}% 이상 필요)`;
     
     const currentLevelIdx = LEVEL_ORDER.indexOf(currentQuizLevel);
     if (passed && currentLevelIdx < LEVEL_ORDER.length - 1) {
         const nextLevel = LEVEL_ORDER[currentLevelIdx + 1];
-        unlockedLevels.add(nextLevel); // 다음 레벨 잠금 해제
-        saveProgress(); // 진행 상황 저장
+        unlockedLevels.add(nextLevel); 
+        saveProgress(); 
         resultMessageText.textContent += ` 다음 '${nextLevel}' 레벨로 도전해보세요!`;
-        proceedNextLevelButton.style.display = 'inline-flex'; // 다음 레벨 버튼 표시
+        proceedNextLevelButton.style.display = 'inline-flex';
         
-        // 다음 레벨 버튼에 btn-success 스타일 적용
         proceedNextLevelButton.classList.add('btn-success');
-        proceedNextLevelButton.classList.remove('btn-primary', 'glass'); // 다른 버튼 스타일 제거
+        proceedNextLevelButton.classList.remove('btn-primary', 'glass');
         proceedNextLevelButton.innerHTML = `<span class="flex items-center justify-center">
                                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                                                 </svg>
                                                 다음 레벨 (${nextLevel})
                                             </span>`;
-        proceedNextLevelButton.onclick = () => selectLevel(nextLevel);
+        proceedNextLevelButton.onclick = () => {
+            currentQuizMode = QuizMode.RANDOM; // 다음 레벨 시작 시 기본은 랜덤 모드
+            selectLevel(nextLevel);
+        };
     } else if (passed && currentLevelIdx === LEVEL_ORDER.length - 1) {
         resultMessageText.textContent = '모든 레벨을 통과했습니다! 대단해요!';
-        proceedNextLevelButton.style.display = 'none'; // 마지막 레벨 통과 시 다음 레벨 버튼 숨김
+        proceedNextLevelButton.style.display = 'none';
     } else {
-        proceedNextLevelButton.style.display = 'none'; // 통과 못했을 시 다음 레벨 버튼 숨김
+        proceedNextLevelButton.style.display = 'none';
     }
 
     // 결과 화면 버튼들 이벤트 연결
-    retryQuizButton.onclick = () => startQuiz(); // 현재 레벨 다시 시작
-    backToLevelsButton.onclick = renderLevelSelector; // 레벨 선택 화면으로 돌아가기
+    // '다시 도전하기'는 현재 모드와 레벨로 다시 시작
+    retryQuizButton.onclick = () => startQuiz(); 
+    backToLevelsButton.onclick = renderLevelSelector; 
 
-    // 버튼 스타일 재확인 (재도전은 primary, 레벨 선택은 glass)
     retryQuizButton.classList.add('btn-primary');
     retryQuizButton.classList.remove('btn-success', 'glass');
     backToLevelsButton.classList.add('glass');
@@ -380,8 +488,6 @@ function loadProgress() {
             unlockedLevels = new Set(JSON.parse(storedLevels));
             console.log("[DEBUG] Loaded unlocked levels:", Array.from(unlockedLevels));
         } else {
-            // 저장된 진행 상황이 없으면 모든 레벨을 잠금 해제합니다.
-            // sample.html은 레벨 선택 화면에서 모든 레벨 버튼을 보여줬으므로, 기본적으로 모두 열린 상태로 가정합니다.
             if (LEVEL_ORDER && LEVEL_ORDER.length > 0) {
                 unlockedLevels = new Set(LEVEL_ORDER);
                 console.log("[DEBUG] No saved progress found. All levels unlocked by default.");
@@ -389,18 +495,62 @@ function loadProgress() {
                 console.error("LEVEL_ORDER is empty. Cannot unlock any default level.");
             }
         }
+
+        // NEW: 정답 맞춘 문제 로드
+        const storedAnsweredCorrectlyWords = localStorage.getItem('simpleQuizAnsweredCorrectlyWords');
+        if (storedAnsweredCorrectlyWords) {
+            const parsedData = JSON.parse(storedAnsweredCorrectlyWords);
+            // 각 레벨의 배열을 Set으로 변환하여 저장
+            for (const level in parsedData) {
+                answeredCorrectlyWordIdsByLevel[level] = new Set(parsedData[level]);
+            }
+            console.log("[DEBUG] Loaded answered correctly word IDs:", answeredCorrectlyWordIdsByLevel);
+        } else {
+            answeredCorrectlyWordIdsByLevel = {};
+        }
+
+        // NEW: 틀린 문제 로드
+        const storedIncorrectWords = localStorage.getItem('simpleQuizIncorrectWords');
+        if (storedIncorrectWords) {
+            const parsedData = JSON.parse(storedIncorrectWords);
+            // 각 레벨의 배열을 Set으로 변환하여 저장
+            for (const level in parsedData) {
+                incorrectWordIdsByLevel[level] = new Set(parsedData[level]);
+            }
+            console.log("[DEBUG] Loaded incorrect word IDs:", incorrectWordIdsByLevel);
+        } else {
+            incorrectWordIdsByLevel = {};
+        }
+
     } catch (e) {
         console.error("Failed to load progress from localStorage:", e);
-        // localStorage 오류 시에도 최소한 첫 레벨은 플레이 가능하도록
         if (LEVEL_ORDER && LEVEL_ORDER.length > 0) {
             unlockedLevels.add(LEVEL_ORDER[0]);
         }
+        answeredCorrectlyWordIdsByLevel = {}; 
+        incorrectWordIdsByLevel = {};         
     }
 }
 
 function saveProgress() {
     localStorage.setItem('simpleQuizUnlockedLevels', JSON.stringify(Array.from(unlockedLevels)));
     console.log("[DEBUG] Saved unlocked levels:", Array.from(unlockedLevels));
+
+    // NEW: 정답 맞춘 문제 저장 (Set을 배열로 변환)
+    const serializableAnsweredCorrectly = {};
+    for (const level in answeredCorrectlyWordIdsByLevel) {
+        serializableAnsweredCorrectly[level] = Array.from(answeredCorrectlyWordIdsByLevel[level]);
+    }
+    localStorage.setItem('simpleQuizAnsweredCorrectlyWords', JSON.stringify(serializableAnsweredCorrectly));
+    console.log("[DEBUG] Saved answered correctly word IDs:", answeredCorrectlyWordIdsByLevel);
+
+    // NEW: 틀린 문제 저장 (Set을 배열로 변환)
+    const serializableIncorrect = {};
+    for (const level in incorrectWordIdsByLevel) {
+        serializableIncorrect[level] = Array.from(incorrectWordIdsByLevel[level]);
+    }
+    localStorage.setItem('simpleQuizIncorrectWords', JSON.stringify(serializableIncorrect));
+    console.log("[DEBUG] Saved incorrect word IDs:", serializableIncorrect); // DEBUG: 직렬화된 데이터 로깅 확인
 }
 
 // --- 앱 시작 ---
@@ -423,22 +573,18 @@ function initializeApp() {
     }
     
     // quizViewContainer의 초기 HTML 내용을 저장.
-    // 이 작업은 DOMContentLoaded 시점에 한 번만 이뤄져야 합니다.
     const tempQuizViewContainer = document.getElementById('quiz-view-container');
     if (tempQuizViewContainer) {
         initialQuizViewHTML = tempQuizViewContainer.innerHTML;
         console.log("[DEBUG] Initial quiz view HTML saved.");
     } else {
         console.error("[DEBUG] initializeApp: quiz-view-container not found. Cannot save initial HTML. This is a critical error.");
-        // 여기서 더 이상 진행하지 않도록 할 수 있습니다.
         return;
     }
     
     // 앱 시작 시, 모든 UI 요소에 대한 첫 참조 설정
     reassignQuizViewElements(); 
 
-    // `next-question-button`에 대한 이벤트 리스너를 한 번만 등록합니다.
-    // 이 버튼은 `innerHTML`로 매번 다시 생성되지 않으므로, 한 번만 등록해도 됩니다.
     if (nextQuestionButton) {
         nextQuestionButton.addEventListener('click', function() {
             console.log("[DEBUG] Next question button clicked.");
@@ -452,13 +598,20 @@ function initializeApp() {
     // 진행 상황 초기화 버튼 이벤트
     if (resetProgressButton) {
         resetProgressButton.onclick = () => {
-            if (confirm("정말로 모든 진행 상황을 초기화하시겠습니까? (모든 레벨이 다시 열린 상태로 유지됩니다)")) {
+            if (confirm("정말로 모든 진행 상황을 초기화하시겠습니까? (레벨 잠금 해제, 정답/오답 문제 기록이 모두 초기화됩니다)")) {
                 localStorage.removeItem('simpleQuizUnlockedLevels'); 
-                loadProgress(); // 모든 레벨을 다시 'unlocked' 상태로 로드합니다.
-                renderLevelSelector(); // 레벨 선택 화면으로 돌아갑니다.
+                localStorage.removeItem('simpleQuizAnsweredCorrectlyWords'); // NEW: 정답 기록 제거
+                localStorage.removeItem('simpleQuizIncorrectWords'); // NEW: 오답 기록 제거
+                
+                // 메모리상의 변수도 초기화
+                unlockedLevels = new Set();
+                answeredCorrectlyWordIdsByLevel = {};
+                incorrectWordIdsByLevel = {};
+
+                loadProgress(); // localStorage가 비워졌으므로 초기 상태로 로드
+                renderLevelSelector(); 
                 const notification = document.createElement('div');
                 notification.textContent = '진행 상황이 초기화되었습니다.';
-                // 알림 스타일 (sample.html의 footer reset button hover 효과와 유사)
                 notification.className = 'fixed bottom-4 right-4 glass text-white p-3 rounded-lg shadow-md animate-pulse z-50';
                 document.body.appendChild(notification);
                 setTimeout(() => {
