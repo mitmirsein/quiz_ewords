@@ -33,15 +33,13 @@ Netlify를 통해 배포된 라이브 데모에 접속하여 바로 퀴즈를 �
 (여기에 실제 배포된 Netlify URL을 넣어주세요)
 
 2. 로컬에서 실행하기
-이 GitHub 저장소를 클론(Clone)하거나 ZIP 파일로 다운로드합니다.
+   이 GitHub 저장소를 클론(Clone)하거나 ZIP 파일로 다운로드합니다.
 git clone https://github.com/mitmirsein/quiz_ewords.git
-Use code with caution.
-Bash
-프로젝트 폴더로 이동합니다.
+
+   프로젝트 폴더로 이동합니다.
 cd quiz_ewords
-Use code with caution.
-Bash
-index.html 파일을 웹 브라우저로 엽니다. (대부분의 브라우저는 파일을 끌어다 놓거나, file:/// 경로로 직접 열 수 있습니다.)
+
+   index.html 파일을 웹 브라우저로 엽니다. (대부분의 브라우저는 파일을 끌어다 놓거나, file:/// 경로로 직접 열 수 있습니다.)
 
 📖 사용 방법 (NEW)
 1. 레벨 선택: 메인 화면에서 원하는 난이도(초급, 중급, 고급) 버튼을 클릭합니다.
