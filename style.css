@@ -51,7 +51,6 @@ body::before {
 }
 
 /* Enhanced button animations (from sample.html) */
-/* 이 부분은 Tailwind의 @apply로 모든 속성을 적용하기 어렵기 때문에 원본 스타일을 유지합니다. */
 .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -79,20 +78,17 @@ body::before {
 
 /* Level selector buttons */
 .level-button {
-    /* 공통 기본 스타일은 Tailwind 클래스로 HTML에 적용하고, 
-       여기에 애니메이션과 특정 효과를 추가합니다. */
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* 텍스트 그림자 추가로 가독성 향상 */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 공통 트랜지션 */
-    position: relative; /* ::before 가상 요소 위치 지정용 */
-    overflow: hidden; /* ::before 가상 요소가 버튼 밖으로 나가지 않도록 */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative; 
+    overflow: hidden; 
 }
 
-/* level-button의 hover 효과 (btn-primary와 동일하게) */
 .level-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
 }
-.level-button::before { /* 빛나는 효과 */
+.level-button::before { 
     content: '';
     position: absolute;
     top: 0;
@@ -103,7 +99,6 @@ body::before {
     transition: left 0.5s;
 }
 .level-button:hover::before { left: 100%; }
-
 
 /* Stagger animation for level buttons (from sample.html) */
 .level-button {
@@ -125,23 +120,19 @@ body::before {
 
 /* Quiz option buttons (combined from provided style.css and sample.html) */
 .quiz-option-button {
-    /* Base styles from sample.html's .option-button (glass effect, transitions) */
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(20px);
-    border-radius: 20px; /* Adjusted from 2xl to 20px for consistency with glass */
+    border-radius: 20px; 
     border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 
-    /* Text and padding from sample.html and provided style.css */
-    @apply w-full p-4 text-center font-semibold text-lg text-white /* sample.html은 text-white */;
+    @apply w-full p-4 text-center font-semibold text-lg text-white;
     
-    /* Hover effects from sample.html's .option-button */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
 }
 
-/* Ripple effect on hover for .quiz-option-button (from sample.html) */
 .quiz-option-button::after {
     content: '';
     position: absolute;
@@ -165,29 +156,27 @@ body::before {
 
 /* Correct/Incorrect/Answered states */
 .quiz-option-button.correct { 
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); /* Similar to feedback-success */
-    border: 1px solid rgba(17, 153, 142, 0.5); /* Stronger border for correct */
-    box-shadow: 0 5px 15px -3px rgba(17, 153, 142, 0.5); /* Green shadow */
-    @apply text-white cursor-default; /* Ensure text color and cursor */
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+    border: 1px solid rgba(17, 153, 142, 0.5); 
+    box-shadow: 0 5px 15px -3px rgba(17, 153, 142, 0.5); 
+    @apply text-white cursor-default; 
 }
 .quiz-option-button.incorrect { 
-    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); /* Similar to feedback-error */
-    border: 1px solid rgba(252, 70, 107, 0.5); /* Stronger border for incorrect */
-    box-shadow: 0 5px 15px -3px rgba(252, 70, 107, 0.5); /* Red shadow */
-    @apply text-white cursor-default; /* Ensure text color and cursor */
+    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%); 
+    border: 1px solid rgba(252, 70, 107, 0.5); 
+    box-shadow: 0 5px 15px -3px rgba(252, 70, 107, 0.5); 
+    @apply text-white cursor-default; 
 }
-.quiz-option-button.unselected-after-reveal { /* 선택되지 않은 오답 (정답 공개 후) */
-    /* transparent 배경과 약한 테두리, 낮은 불투명도로 변경하여 강조를 낮춤 */
-    background: rgba(255, 255, 255, 0.1); /* 더 어두운 glass */
-    border: 1px solid rgba(255, 255, 255, 0.05); /* 더 약한 테두리 */
-    box-shadow: none; /* 그림자 제거 */
-    @apply text-white/50 cursor-default opacity-65; /* 텍스트 불투명도 및 커서 */
-    backdrop-filter: blur(10px); /* 블러 유지 */
+.quiz-option-button.unselected-after-reveal { 
+    background: rgba(255, 255, 255, 0.1); 
+    border: 1px solid rgba(255, 255, 255, 0.05); 
+    box-shadow: none; 
+    @apply text-white/50 cursor-default opacity-65; 
+    backdrop-filter: blur(10px); 
 }
-.quiz-option-button.answered { /* 모든 선택지 공통 (정답 공개 후) */
-    @apply pointer-events-none; /* 클릭 이벤트 완전히 비활성화 */
+.quiz-option-button.answered { 
+    @apply pointer-events-none; 
 }
-
 
 /* Title animation (from sample.html) */
 .title-gradient {
