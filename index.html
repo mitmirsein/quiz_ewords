@@ -42,6 +42,22 @@
                     <button class="level-button intermediate">⚡ 중급 (Level 2)</button>
                     <button class="level-button advanced">🔥 고급 (Level 3)</button>
                 </div>
+
+                <!-- NEW: Quiz Mode Selector (Hidden by default, shown after level selection) -->
+                <div id="quiz-mode-selector" style="display:none;" class="text-center mt-10">
+                    <h3 class="text-2xl font-bold mb-6 text-white drop-shadow-lg" id="selected-level-quiz-mode-text"></h3>
+                    <div class="flex flex-col space-y-4">
+                        <button id="start-random-quiz-button" class="btn-primary text-white font-bold py-4 px-8 rounded-2xl text-xl shadow-xl">
+                            📚 랜덤 퀴즈 시작
+                        </button>
+                        <button id="start-incorrect-quiz-button" class="btn-warning text-white font-bold py-4 px-8 rounded-2xl text-xl shadow-xl">
+                            📝 오답 노트 풀기 (0개)
+                        </button>
+                        <button id="back-to-level-select-button" class="glass text-white font-bold py-3 px-6 rounded-2xl text-lg shadow-xl">
+                            ⬅️ 레벨 선택으로
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- 2. Quiz View -->
