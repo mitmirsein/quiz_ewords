@@ -23,45 +23,16 @@
 *   **Tailwind CSS**: Utility-first CSS 프레임워크로, 빠르고 일관된 디자인을 구현합니다.
 *   **바닐라 JavaScript**: 복잡한 라이브러리 없이 순수 JavaScript로 퀴즈 로직과 동적인 UI를 구현합니다.
 
-## 📚 단어 데이터
-
-단어 데이터는 `words.js` 파일에 다음과 같은 형태로 저장되어 있습니다.
-
-```javascript
-const WORDS_DATA = [
-    { id: 'b_1', english: 'man', korean: '(성인) 남자, 남성', level: DifficultyLevel.BEGINNER },
-    // ...
-    { id: 'i_1', english: 'be[come] from', korean: '~출신이다/ ~에서 오다', level: DifficultyLevel.INTERMEDIATE },
-    // ...
-    { id: 'a_1', english: 'someone', korean: '누군가, 어떤 사람', level: DifficultyLevel.ADVANCED },
-    // ...
-];
-
-const DifficultyLevel = {
-    BEGINNER: '초급',
-    INTERMEDIATE: '중급',
-    ADVANCED: '고급',
-};
-
-const LEVEL_ORDER = [
-    DifficultyLevel.BEGINNER,
-    DifficultyLevel.INTERMEDIATE,
-    DifficultyLevel.ADVANCED,
-];
-
-const QUESTIONS_PER_QUIZ = 20; // 한 번에 풀 수 있는 문제 수
-const OPTIONS_COUNT = 4; // 보기 개수
-const LEVEL_UP_THRESHOLD_PERCENTAGE = 70; // 레벨 통과 기준 정답률
-Use code with caution.
-Markdown
 초급 (Beginner): 183개 단어
 중급 (Intermediate): 330개 단어
 고급 (Advanced): 261개 단어
+
 🚀 시작하기
 1. 웹에서 바로 사용하기 (추천)
 Netlify를 통해 배포된 라이브 데모에 접속하여 바로 퀴즈를 시작할 수 있습니다:
 영단어 쑥쑥 라이브 데모 (클릭!)
 (여기에 실제 배포된 Netlify URL을 넣어주세요)
+
 2. 로컬에서 실행하기
 이 GitHub 저장소를 클론(Clone)하거나 ZIP 파일로 다운로드합니다.
 git clone https://github.com/mitmirsein/quiz_ewords.git
@@ -72,6 +43,7 @@ cd quiz_ewords
 Use code with caution.
 Bash
 index.html 파일을 웹 브라우저로 엽니다. (대부분의 브라우저는 파일을 끌어다 놓거나, file:/// 경로로 직접 열 수 있습니다.)
+
 📖 사용 방법 (NEW)
 레벨 선택: 메인 화면에서 원하는 난이도(초급, 중급, 고급) 버튼을 클릭합니다.
 퀴즈 모드 선택: 레벨을 선택하면 해당 레벨의 퀴즈 모드 선택 화면이 나타납니다.
