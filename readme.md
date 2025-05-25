@@ -2,8 +2,12 @@
 
 영단어 쑥쑥은 여러분의 영어 단어 실력을 효과적으로 향상시킬 수 있도록 돕는 웹 기반 퀴즈 애플리케이션입니다.
 아름다운 디자인과 직관적인 사용자 경험을 통해 즐겁게 학습할 수 있습니다.
+중학생 영어 단어 퀴즈입니다.
+   - 초급 (Beginner): 183개 단어
+   - 중급 (Intermediate): 330개 단어
+   - 고급 (Advanced): 261개 단어
 
-**[영단어 쑥쑥 라이브 데모 바로가기]: https://quizeword.netlify.app
+**영단어 쑥쑥 라이브 데모 바로가기: https://quizeword.netlify.app
 
 ## ✨ 주요 기능
 
@@ -21,10 +25,6 @@
 *   **HTML5**: 웹 페이지의 구조를 정의합니다.
 *   **Tailwind CSS**: Utility-first CSS 프레임워크로, 빠르고 일관된 디자인을 구현합니다.
 *   **바닐라 JavaScript**: 복잡한 라이브러리 없이 순수 JavaScript로 퀴즈 로직과 동적인 UI를 구현합니다.
-
-초급 (Beginner): 183개 단어
-중급 (Intermediate): 330개 단어
-고급 (Advanced): 261개 단어
 
 🚀 시작하기
 1. 웹에서 바로 사용하기 (추천)
