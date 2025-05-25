@@ -3,9 +3,7 @@
 영단어 쑥쑥은 여러분의 영어 단어 실력을 효과적으로 향상시킬 수 있도록 돕는 웹 기반 퀴즈 애플리케이션입니다.
 아름다운 디자인과 직관적인 사용자 경험을 통해 즐겁게 학습할 수 있습니다.
 
-**[영단어 쑥쑥 라이브 데모 바로가기](https://quizewords.netlify.app){:target="_blank"}**
-[![영단어 쑥쑥 메인 화면](https://github.com/mitmirsein/quiz_ewords/assets/51953288/808b8b0e-b7d6-444f-ac22-6b3a033f20ee)](https://quizewords.netlify.app){:target="_blank"}
-*메인 화면 예시 (클릭하여 데모 실행)*
+**[영단어 쑥쑥 라이브 데모 바로가기]: https://quizeword.netlify.app
 
 ## ✨ 주요 기능
 
