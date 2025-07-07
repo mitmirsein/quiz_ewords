@@ -22,6 +22,9 @@ const closeSettingsButton = document.getElementById('close-settings-button');
 const saveSettingsButton = document.getElementById('save-settings-button');
 const questionsPerQuizInput = document.getElementById('questions-per-quiz-input');
 const questionsPerQuizValue = document.getElementById('questions-per-quiz-value');
+const optionsCountGroup = document.getElementById('options-count-group');
+const levelUpPercentageInput = document.getElementById('level-up-percentage-input');
+const levelUpPercentageValue = document.getElementById('level-up-percentage-value');
 
 
 // 퀴즈 뷰 내부 요소들은 quizViewContainer.innerHTML이 재설정될 수 있으므로
@@ -66,7 +69,9 @@ let isAnswered = false; // 사용자가 현재 질문에 답했는지 여부
 
 // NEW: 사용자 설정
 let userConfig = {
-    questionsPerQuiz: QUESTIONS_PER_QUIZ // config.js의 기본값으로 시작
+    questionsPerQuiz: QUESTIONS_PER_QUIZ, // config.js의 기본값으로 시작
+    optionsCount: OPTIONS_COUNT,
+    levelUpThreshold: LEVEL_UP_THRESHOLD_PERCENTAGE
 };
 
 // NEW: 퀴즈 모드 상수 및 현재 퀴즈 모드 변수
@@ -161,6 +166,20 @@ function openSettingsModal() {
     // 현재 설정값으로 UI 업데이트
     questionsPerQuizInput.value = userConfig.questionsPerQuiz;
     questionsPerQuizValue.textContent = userConfig.questionsPerQuiz;
+    levelUpPercentageInput.value = userConfig.levelUpThreshold;
+    levelUpPercentageValue.textContent = `${userConfig.levelUpThreshold}%`;
+
+    // 라디오 버튼 활성화 상태 업데이트
+    if (optionsCountGroup) {
+        const buttons = optionsCountGroup.querySelectorAll('.settings-radio-button');
+        buttons.forEach(btn => {
+            if (parseInt(btn.dataset.value, 10) === userConfig.optionsCount) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
 
     settingsModal.style.display = 'flex';
     // 애니메이션을 위해 약간의 딜레이 후 클래스 추가
@@ -424,17 +443,17 @@ function generateOptions(correctWord) {
         .filter(word => word.korean !== correctAnswer && word.level === correctWord.level)
         .map(word => word.korean);
 
-    if (distractors.length < OPTIONS_COUNT - 1) {
+    if (distractors.length < userConfig.optionsCount - 1) {
         const globalDistractors = ALL_WORDS_DATA
             .filter(word => word.korean !== correctAnswer && !distractors.includes(word.korean))
             .map(word => word.korean);
         distractors = [...new Set([...distractors, ...globalDistractors])]; 
     }
 
-    distractors = shuffleArray(distractors).slice(0, OPTIONS_COUNT - 1);
+    distractors = shuffleArray(distractors).slice(0, userConfig.optionsCount - 1);
 
     let tempDistractorCount = 1;
-    while (distractors.length < OPTIONS_COUNT - 1) {
+    while (distractors.length < userConfig.optionsCount - 1) {
         const tempDist = `오답${tempDistractorCount++}`;
         if (tempDist !== correctAnswer && !distractors.includes(tempDist)) {
             distractors.push(tempDist);
@@ -445,7 +464,7 @@ function generateOptions(correctWord) {
     }
 
     const finalOptions = shuffleArray([correctAnswer, ...distractors]);
-    return finalOptions.slice(0, OPTIONS_COUNT);
+    return finalOptions.slice(0, userConfig.optionsCount);
 }
 
 function handleAnswer(selectedButton, selectedAnswer, correctAnswer) {
@@ -527,7 +546,7 @@ function handleAnswer(selectedButton, selectedAnswer, correctAnswer) {
 function renderResultScreen() {
     showScreen(resultScreenContainer);
     const percentage = currentQuestions.length > 0 ? (score / currentQuestions.length) * 100 : 0;
-    const passed = percentage >= LEVEL_UP_THRESHOLD_PERCENTAGE;
+    const passed = percentage >= userConfig.levelUpThreshold;
 
     resultLevel.textContent = `${currentQuizLevel} 결과`;
     resultPercentage.textContent = `${percentage.toFixed(0)}%`;
@@ -549,7 +568,7 @@ function renderResultScreen() {
     resultMessage.classList.remove('text-green-700', 'text-red-700'); 
     resultMessage.classList.add('text-white'); 
 
-    resultMessageText.textContent = passed ? '축하합니다! 레벨을 통과했습니다.' : `아쉬워요! (${LEVEL_UP_THRESHOLD_PERCENTAGE}% 이상 필요)`;
+    resultMessageText.textContent = passed ? '축하합니다! 레벨을 통과했습니다.' : `아쉬워요! (${userConfig.levelUpThreshold}% 이상 필요)`;
     
     const currentLevelIdx = LEVEL_ORDER.indexOf(currentQuizLevel);
     if (passed && currentLevelIdx < LEVEL_ORDER.length - 1) {
@@ -598,6 +617,12 @@ function loadUserConfig() {
             if (parsedConfig.questionsPerQuiz && typeof parsedConfig.questionsPerQuiz === 'number') {
                 userConfig.questionsPerQuiz = parsedConfig.questionsPerQuiz;
             }
+            if (parsedConfig.optionsCount && typeof parsedConfig.optionsCount === 'number') {
+                userConfig.optionsCount = parsedConfig.optionsCount;
+            }
+            if (parsedConfig.levelUpThreshold && typeof parsedConfig.levelUpThreshold === 'number') {
+                userConfig.levelUpThreshold = parsedConfig.levelUpThreshold;
+            }
             console.log("[DEBUG] Loaded user config:", userConfig);
         } else {
             console.log("[DEBUG] No user config found, using defaults.");
@@ -606,6 +631,8 @@ function loadUserConfig() {
         console.error("Failed to load user config from localStorage:", e);
         // 기본값 사용
         userConfig.questionsPerQuiz = QUESTIONS_PER_QUIZ;
+        userConfig.optionsCount = OPTIONS_COUNT;
+        userConfig.levelUpThreshold = LEVEL_UP_THRESHOLD_PERCENTAGE;
     }
 }
 
@@ -800,7 +827,7 @@ function showNotification(message) {
 
 // --- 이벤트 리스너 초기화 ---
 function initializeEventListeners() {
-    if (!settingsButton || !closeSettingsButton || !saveSettingsButton || !questionsPerQuizInput || !settingsModal || !nextQuestionButton || !resetProgressButton) {
+    if (!settingsButton || !closeSettingsButton || !saveSettingsButton || !questionsPerQuizInput || !settingsModal || !nextQuestionButton || !resetProgressButton || !optionsCountGroup || !levelUpPercentageInput) {
         console.error("One or more UI elements for event listeners are missing.");
         return;
     }
@@ -810,12 +837,28 @@ function initializeEventListeners() {
     closeSettingsButton.addEventListener('click', closeSettingsModal);
     saveSettingsButton.addEventListener('click', () => {
         userConfig.questionsPerQuiz = parseInt(questionsPerQuizInput.value, 10);
+        const activeOptionButton = optionsCountGroup.querySelector('.active');
+        if (activeOptionButton) {
+            userConfig.optionsCount = parseInt(activeOptionButton.dataset.value, 10);
+        }
+        userConfig.levelUpThreshold = parseInt(levelUpPercentageInput.value, 10);
         saveUserConfig();
         closeSettingsModal();
         showNotification('설정이 저장되었습니다.');
     });
     questionsPerQuizInput.addEventListener('input', (e) => {
         questionsPerQuizValue.textContent = e.target.value;
+    });
+    levelUpPercentageInput.addEventListener('input', (e) => {
+        levelUpPercentageValue.textContent = `${e.target.value}%`;
+    });
+    optionsCountGroup.addEventListener('click', (e) => {
+        if (e.target.classList.contains('settings-radio-button')) {
+            // 모든 버튼에서 active 클래스 제거
+            optionsCountGroup.querySelectorAll('.settings-radio-button').forEach(btn => btn.classList.remove('active'));
+            // 클릭된 버튼에만 active 클래스 추가
+            e.target.classList.add('active');
+        }
     });
     settingsModal.addEventListener('click', (e) => {
         if (e.target === settingsModal) {
@@ -844,6 +887,8 @@ function initializeEventListeners() {
             answeredCorrectlyWordIdsByLevel = {};
             incorrectWordIdsByLevel = {};
             userConfig.questionsPerQuiz = QUESTIONS_PER_QUIZ; // 기본값으로 복원
+            userConfig.optionsCount = OPTIONS_COUNT;
+            userConfig.levelUpThreshold = LEVEL_UP_THRESHOLD_PERCENTAGE;
 
             loadProgress();
             renderLevelSelector();
