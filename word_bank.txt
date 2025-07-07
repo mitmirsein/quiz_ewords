@@ -1,4 +1,34 @@
 // --- 초급 ---
+get up,일어나다
+sit down,앉다
+stand up,일어서다
+turn on,(전등/기기 등을) 켜다
+turn off,(전등/기기 등을) 끄다
+put on,(옷/신발 등을) 입다, 신다
+take off,(옷/신발 등을) 벗다
+look at,~을 보다
+listen to,~을 듣다
+wait for,~을 기다리다
+go to,에 가다
+come from, 출신이다
+think about,~에 대해 생각하다
+ask for,~을 요청하다
+run away,도망가다
+in the morning / afternoon / evening,아침에 / 오후에 / 저녁에
+at night,밤에
+at school / at home,학교에 / 집에
+on the desk / on the wall,책상 위에 / 벽에
+by bus / by subway,버스로 / 지하철로
+on foot,걸어서
+at that time,그 당시에
+for a long time,오랫동안
+in the city / in the country,도시에 / 시골에
+on weekends,주말마다
+in front of,~의 앞에
+next to,~의 옆에
+under the tree,나무 아래에
+on vacation,휴가 중인
+in summer / winter,여름에 / 겨울에
 accept,받아들이다
 across,가로질러
 actor,배우
@@ -163,6 +193,46 @@ neighbor,이웃
 opinion,의견
 
 // --- 중급 ---
+look for,~을 찾다
+look after,~을 돌보다
+give up,포기하다
+take off,(비행기가) 이륙하다
+depend on,~에 의존하다
+worry about,~에 대해 걱정하다
+laugh at,~을 비웃다
+agree with,(의견에) 동의하다
+ask for,요청하다
+deal with,~을 다루다, 처리하다
+fill out,(서류를) 작성하다
+find out,알아내다
+go on,계속하다
+pick up,줍다, (차로) 태우러 가다
+run out of,~을 다 써버리다
+take part in,~에 참여하다
+turn down,(소리/세기를) 줄이다, 거절하다
+break down,고장나다
+bring up,(화제를) 꺼내다, 양육하다
+cheer up,기운 내다, 격려하다
+in fact,사실은
+on time,정각에, 시간을 어기지 않고
+in time,제시간에, 늦지 않게
+by chance,우연히
+on purpose,일부러, 고의로
+for example,예를 들어
+at first,처음에는
+in the end,마침내, 결국
+at least,적어도
+in danger,위험에 처한
+for free,무료로
+in a hurry,서둘러서
+on sale,할인 중인
+by oneself,혼자서, 스스로
+as a result,결과적으로
+in addition,게다가, 추가적으로
+instead of,~ 대신에
+in common,공통적으로
+at the same time,동시에
+according to,~에 따르면
 ability,능력
 abnormal,비정상적인
 abroad,해외로
@@ -419,6 +489,41 @@ regular,규칙적인
 settle,정착하다
 
 // --- 고급 ---
+look down on,~을 무시하다, 얕보다
+look up to,~을 존경하다
+put up with,~을 참다, 견디다
+come up with,(생각/아이디어를) 떠올리다
+get along with,~와 잘 지내다
+account for,~을 설명하다, 차지하다
+break out,(전쟁/질병이) 발생하다
+call off,취소하다
+carry out,수행하다, 실행하다
+catch up with,~을 따라잡다
+figure out,~을 이해하다, 알아내다
+keep up with,~에 뒤처지지 않다
+make up for,~을 만회하다, 보상하다
+point out,~을 지적하다
+run into,(우연히) 마주치다
+stand for,~을 상징하다, 의미하다
+take advantage of,~을 이용하다
+take over,~을 인계받다
+turn out,(~임이) 판명되다, 드러나다
+work out,운동하다, (문제를) 해결하다
+on behalf of,~을 대표하여, 대신하여
+in charge of,~을 책임지고 있는
+in terms of,~의 관점에서
+regardless of,~에 상관없이
+in advance,미리, 사전에
+by all means,반드시, 어떤 일이 있어도
+in detail,상세하게
+on average,평균적으로
+in contrast,그에 반해서, 대조적으로
+on the other hand,반면에
+in conclusion,결론적으로
+for the sake of,~을 위하여
+in favor of,~에 찬성하여
+as a matter of fact,사실상 (in fact보다 강조)
+in spite of,~에도 불구하고
 abandon,포기하다
 abolish,폐지하다
 abundant,풍부한
