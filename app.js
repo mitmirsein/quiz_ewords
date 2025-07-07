@@ -47,6 +47,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let unlockedLevels = new Set();
+let ALL_WORDS_DATA = []; // NEW: word_bank.txt에서 로드한 모든 단어 데이터
 let availableVoices = []; // NEW: Web Speech API에서 사용 가능한 목소리 목록
 
 // NEW: 정답 맞춘 문제와 틀린 문제 ID를 관리
@@ -277,7 +278,7 @@ function startQuiz() {
         const currentIncorrectIds = incorrectWordIdsByLevel[currentQuizLevel] || new Set();
 
         wordsToChooseFrom = Array.from(currentIncorrectIds)
-                               .map(id => WORDS_DATA.find(word => word.id === id))
+                               .map(id => ALL_WORDS_DATA.find(word => word.id === id))
                                .filter(word => word !== undefined); // 존재하지 않는 ID로 인한 undefined 제거
         
         console.log(`[DEBUG] Incorrect words for ${currentQuizLevel}:`, wordsToChooseFrom.length);
@@ -293,7 +294,7 @@ function startQuiz() {
         }
 
     } else { // 기본: 랜덤 퀴즈 모드 (QuizMode.RANDOM)
-        const allLevelWords = WORDS_DATA.filter(word => word.level === currentQuizLevel);
+        const allLevelWords = ALL_WORDS_DATA.filter(word => word.level === currentQuizLevel);
         
         // answeredCorrectlyWordIdsByLevel[currentQuizLevel]이 Set이 아니거나 없을 수 있으므로 빈 Set으로 기본값 지정
         const currentAnsweredCorrectlyIds = answeredCorrectlyWordIdsByLevel[currentQuizLevel] || new Set();
@@ -324,7 +325,7 @@ function startQuiz() {
     if (currentQuestions.length === 0) {
         quizViewContainer.innerHTML = `
             <div class="text-center p-4 text-white">
-                <p class="text-red-300 mb-4">선택하신 레벨(${currentQuizLevel})에 출제할 문제가 현재 없습니다. <br/>words.js 파일에 단어를 추가하거나, 진행 상황을 초기화해보세요.</p>
+                <p class="text-red-300 mb-4">선택하신 레벨(${currentQuizLevel})에 출제할 문제가 현재 없습니다. <br/>word_bank.txt 파일에 단어를 추가하거나, 진행 상황을 초기화해보세요.</p>
                 <button onclick="renderLevelSelector()" class="btn-primary text-white font-bold py-3 px-6 rounded-xl shadow-md">레벨 선택으로 돌아가기</button>
             </div>`;
         return;
@@ -381,12 +382,12 @@ function renderQuestion() {
 
 function generateOptions(correctWord) {
     const correctAnswer = correctWord.korean;
-    let distractors = WORDS_DATA
+    let distractors = ALL_WORDS_DATA
         .filter(word => word.korean !== correctAnswer && word.level === correctWord.level)
         .map(word => word.korean);
 
     if (distractors.length < OPTIONS_COUNT - 1) {
-        const globalDistractors = WORDS_DATA
+        const globalDistractors = ALL_WORDS_DATA
             .filter(word => word.korean !== correctAnswer && !distractors.includes(word.korean))
             .map(word => word.korean);
         distractors = [...new Set([...distractors, ...globalDistractors])]; 
@@ -623,21 +624,72 @@ function saveProgress() {
 }
 
 // --- 앱 시작 ---
-function initializeApp() {
-    // words.js의 필수 변수들이 로드되었는지 확인
-    if (typeof WORDS_DATA === 'undefined' || typeof LEVEL_ORDER === 'undefined' || 
-        typeof QUESTIONS_PER_QUIZ === 'undefined' || typeof DifficultyLevel === 'undefined' || 
+async function initializeApp() {
+    // config.js의 필수 변수들이 로드되었는지 확인
+    if (typeof LEVEL_ORDER === 'undefined' || typeof QUESTIONS_PER_QUIZ === 'undefined' || 
+        typeof DifficultyLevel === 'undefined' || 
         typeof OPTIONS_COUNT === 'undefined' || typeof LEVEL_UP_THRESHOLD_PERCENTAGE === 'undefined') {
         document.body.innerHTML = `
             <div class="min-h-screen flex flex-col items-center justify-center p-4 text-white">
                 <p class="text-red-300 text-center text-lg">
-                    오류: words.js 파일이 제대로 로드되지 않았거나, <br/>
-                    필요한 변수(WORDS_DATA, LEVEL_ORDER 등)가 없습니다. <br/>
-                    words.js 파일을 확인해주세요.
+                    오류: config.js 파일이 제대로 로드되지 않았거나, <br/>
+                    필요한 설정 변수(LEVEL_ORDER 등)가 없습니다. <br/>
+                    config.js 파일을 확인해주세요.
                 </p> 
                 <p class="mt-4 text-white/60">콘솔(F12)에서 자세한 오류를 확인할 수 있습니다.</p>
             </div>`;
-        console.error("Critical variables from words.js are missing. Check words.js loading and content.");
+        console.error("Critical variables from config.js are missing. Check config.js loading and content.");
+        return;
+    }
+
+    // NEW: word_bank.txt에서 단어 데이터 로드 및 파싱
+    try {
+        const response = await fetch('word_bank.txt');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const textData = await response.text();
+
+        let currentLevel = '';
+        const levelMapping = {
+            '초급': DifficultyLevel.BEGINNER,
+            '중급': DifficultyLevel.INTERMEDIATE,
+            '고급': DifficultyLevel.ADVANCED
+        };
+
+        const lines = textData.split('\n');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('// ---')) {
+                const levelName = trimmedLine.replace('// ---', '').replace('---', '').trim();
+                currentLevel = levelMapping[levelName] || '';
+            } else if (trimmedLine && currentLevel) {
+                const parts = trimmedLine.split(',');
+                if (parts.length === 2) {
+                    const english = parts[0].trim();
+                    const korean = parts[1].trim();
+                    if (english && korean) {
+                        ALL_WORDS_DATA.push({
+                            id: english, // 영어 단어 자체를 고유 ID로 사용
+                            english: english,
+                            korean: korean,
+                            level: currentLevel
+                        });
+                    }
+                }
+            }
+        }
+        console.log(`[DEBUG] Successfully loaded and parsed ${ALL_WORDS_DATA.length} words from word_bank.txt`);
+
+    } catch (error) {
+        document.body.innerHTML = `
+            <div class="min-h-screen flex flex-col items-center justify-center p-4 text-white">
+                <p class="text-red-300 text-center text-lg">
+                    오류: word_bank.txt 파일을 불러올 수 없습니다. <br/>
+                    파일이 올바른 위치에 있는지, 서버가 파일을 제공하는지 확인해주세요.
+                </p> 
+            </div>`;
+        console.error("Failed to fetch or parse word_bank.txt:", error);
         return;
     }
     

@@ -27,23 +27,52 @@
 
 ## 🚀 시작하기
 
+### ✍️ 단어 추가 및 수정 방법 (NEW & SIMPLIFIED)
+
+단어 관리가 매우 간단해졌습니다. 프로젝트 폴더에 있는 **`word_bank.txt`** 파일을 직접 수정하기만 하면 됩니다.
+1.  `word_bank.txt` 파일을 엽니다.
+2.  레벨은 `// --- 레벨 이름 ---` (예: `// --- 초급 ---`)으로 구분합니다.
+3.  단어는 `영어단어,한글뜻` 형식으로 한 줄에 하나씩 추가, 수정, 또는 삭제합니다.
+4.  파일을 저장하면 앱에 자동으로 반영됩니다.
+
 ### 웹에서 바로 사용하기 (추천)
 Netlify를 통해 배포된 라이브 데모에 접속하여 바로 퀴즈를 시작할 수 있습니다:
 https://quizeword.netlify.app
 
 ### 로컬에서 실행하기
 
-1. 이 GitHub 저장소를 클론(Clone)하거나 ZIP 파일로 다운로드합니다.
-   ```bash
-   git clone https://github.com/mitmirsein/quiz_ewords.git
-   ```
+이 애플리케이션은 단어 목록(`word_bank.txt`)을 불러오기 위해 `fetch` API를 사용합니다. 브라우저의 보안 정책(CORS)으로 인해, `index.html` 파일을 직접 열면(`file:///...`) 단어 목록을 불러오는 데 실패할 수 있습니다.
 
-2. 프로젝트 폴더로 이동합니다.
-   ```bash
-   cd quiz_ewords
-   ```
+따라서, 로컬에서 정상적으로 실행하려면 **로컬 웹 서버**를 사용해야 합니다. 가장 간단한 방법은 다음과 같습니다.
 
-3. `index.html` 파일을 웹 브라우저로 엽니다. (대부분의 브라우저는 파일을 끌어다 놓거나, `file:///` 경로로 직접 열 수 있습니다.)
+**방법 1: VS Code의 Live Server 확장 프로그램 사용 (추천)**
+
+1.  Visual Studio Code를 설치합니다.
+2.  VS Code의 확장 프로그램 탭에서 'Live Server'를 검색하여 설치합니다.
+3.  VS Code에서 프로젝트 폴더를 엽니다.
+4.  `index.html` 파일을 우클릭한 후 "Open with Live Server"를 선택하거나, 에디터 우측 하단의 "Go Live" 버튼을 클릭합니다.
+5.  브라우저에 `http://127.0.0.1:5500` 과 같은 주소로 앱이 자동으로 열립니다.
+
+**방법 2: Python을 이용한 로컬 서버 실행**
+
+컴퓨터에 Python이 설치되어 있다면, 터미널(또는 명령 프롬프트)을 사용하여 간단히 서버를 실행할 수 있습니다.
+
+1.  이 GitHub 저장소를 클론(Clone)하거나 ZIP 파일로 다운로드합니다.
+2.  터미널을 열고 프로젝트 폴더로 이동합니다.
+    ```bash
+    cd quiz_ewords
+    ```
+3.  아래 명령어를 실행하여 웹 서버를 시작합니다.
+    
+    *   Python 3.x 버전의 경우:
+        ```bash
+        python -m http.server
+        ```
+    *   Python 2.x 버전의 경우:
+        ```bash
+        python -m SimpleHTTPServer
+        ```
+4.  웹 브라우저를 열고 주소창에 `http://localhost:8000` 을 입력하여 접속합니다.
 
 ## 📖 사용 방법 (NEW)
 
