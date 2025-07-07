@@ -754,22 +754,39 @@ async function initializeApp() {
                 const levelName = trimmedLine.replace('// ---', '').replace('---', '').trim();
                 currentLevel = levelMapping[levelName] || '';
             } else if (trimmedLine && currentLevel) {
-                const parts = trimmedLine.split(',');
-                if (parts.length === 2) {
-                    const english = parts[0].trim();
-                    const korean = parts[1].trim();
-                    if (english && korean) {
-                        ALL_WORDS_DATA.push({
-                            id: english, // 영어 단어 자체를 고유 ID로 사용
-                            english: english,
-                            korean: korean,
-                            level: currentLevel
-                        });
+                // 쉼표(,)를 기준으로 영어와 한글 부분을 나눔 (더 견고한 방식)
+                const firstCommaIndex = trimmedLine.indexOf(',');
+                if (firstCommaIndex !== -1) {
+                    const englishPart = trimmedLine.substring(0, firstCommaIndex).trim();
+                    const koreanPart = trimmedLine.substring(firstCommaIndex + 1).trim();
+
+                    // '/'로 구분된 여러 항목 처리
+                    const englishEntries = englishPart.split('/').map(s => s.trim());
+                    const koreanEntries = koreanPart.split('/').map(s => s.trim());
+
+                    // 영어와 한글 항목의 수가 일치하는 경우, 각각을 별도의 단어로 추가
+                    if (englishEntries.length > 1 && englishEntries.length === koreanEntries.length) {
+                        for (let i = 0; i < englishEntries.length; i++) {
+                            const english = englishEntries[i];
+                            const korean = koreanEntries[i];
+                            if (english && korean) {
+                                ALL_WORDS_DATA.push({ id: english, english: english, korean: korean, level: currentLevel });
+                            }
+                        }
+                    } else {
+                        // 항목 수가 맞지 않거나 '/'가 없는 경우, 전체를 하나의 단어로 처리
+                        if (englishPart && koreanPart) {
+                            ALL_WORDS_DATA.push({
+                                id: englishPart,
+                                english: englishPart,
+                                korean: koreanPart,
+                                level: currentLevel
+                            });
+                        }
                     }
                 }
             }
         }
-        console.log(`[DEBUG] Successfully loaded and parsed ${ALL_WORDS_DATA.length} words from word_bank.txt`);
 
     } catch (error) {
         document.body.innerHTML = `
