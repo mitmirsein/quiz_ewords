@@ -26,6 +26,7 @@ let questionTextElement;
 let optionsGrid;
 let feedbackMessageElement;
 let nextQuestionButton;
+let speakButton; // 발음 듣기 버튼
 
 // 결과 화면 요소들은 화면 전환 시 다시 참조해도 되지만, HTML이 직접 변경되지 않으므로 한 번만 참조합니다.
 const resultTitle = document.getElementById('result-title');
@@ -46,6 +47,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let unlockedLevels = new Set();
+let availableVoices = []; // NEW: Web Speech API에서 사용 가능한 목소리 목록
 
 // NEW: 정답 맞춘 문제와 틀린 문제 ID를 관리
 let answeredCorrectlyWordIdsByLevel = {}; // { '초급': Set<string>, '중급': Set<string> } - 이전에 정답을 맞춘 문제 ID
@@ -79,6 +81,55 @@ function shuffleArray(array) {
     return newArray;
 }
 
+// --- 발음 듣기 함수 (Web Speech API) ---
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        // 진행 중인 다른 발음이 있다면 중지
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; // 언어 설정
+        utterance.rate = 0.9;     // 발음 속도 (기본값 1)
+        utterance.pitch = 1;    // 음높이 (기본값 1)
+
+        // NEW: 특정 목소리 지정 (사용 가능한 경우)
+        if (availableVoices.length > 0) {
+            // 선호하는 목소리 목록 (품질이 좋은 순서대로)
+            const preferredVoices = [
+                'Google US English', // Google Chrome (PC/Android)
+                'Samantha',          // Apple (macOS/iOS) - 기본 목소리
+                'Alex',              // Apple (macOS) - 고품질 목소리
+                'Microsoft Zira - English (United States)', // Microsoft Edge
+                'Microsoft David - English (United States)' // Microsoft Edge
+            ];
+
+            let selectedVoice = null;
+
+            // 1. 선호하는 목소리가 있는지 확인
+            for (const voiceName of preferredVoices) {
+                selectedVoice = availableVoices.find(voice => voice.name === voiceName && voice.lang === 'en-US');
+                if (selectedVoice) break;
+            }
+
+            // 2. 선호하는 목소리가 없으면, 해당 언어의 기본(default) 목소리 찾기
+            if (!selectedVoice) {
+                selectedVoice = availableVoices.find(voice => voice.lang === 'en-US' && voice.default);
+            }
+            
+            // 3. 그것도 없으면, 사용 가능한 첫 번째 en-US 목소리 사용
+            if (!selectedVoice) {
+                selectedVoice = availableVoices.find(voice => voice.lang === 'en-US');
+            }
+
+            utterance.voice = selectedVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    } else {
+        console.warn('Web Speech API is not supported in this browser.');
+    }
+}
+
 // --- 화면 전환 함수 ---
 function showScreen(screenToShow) {
     levelSelectorContainer.style.display = 'none';
@@ -87,6 +138,14 @@ function showScreen(screenToShow) {
     quizModeSelector.style.display = 'none'; // 퀴즈 모드 선택 UI도 숨김
 
     screenToShow.style.display = 'block';
+}
+
+// NEW: 사용 가능한 목소리를 로드하는 함수
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices();
+        console.log("[DEBUG] Voices loaded:", availableVoices.map(v => `${v.name} (${v.lang})`));
+    }
 }
 
 // --- 레벨 선택 화면 ---
@@ -170,6 +229,7 @@ function reassignQuizViewElements() {
     optionsGrid = document.getElementById('options-grid');
     feedbackMessageElement = document.getElementById('feedback-message');
     nextQuestionButton = document.getElementById('next-question-button');
+    speakButton = document.getElementById('speak-button');
     console.log("[DEBUG] Quiz view elements reassigned.");
 }
 
@@ -293,6 +353,15 @@ function renderQuestion() {
 
     const questionData = currentQuestions[currentQuestionIndex];
     questionTextElement.textContent = `${questionData.english}`;
+
+    // 질문이 나타날 때 자동으로 발음 재생
+    speak(questionData.english);
+
+    // 스피커 아이콘을 클릭하면 발음이 다시 나오도록 이벤트 리스너 추가
+    if (speakButton) {
+        speakButton.onclick = () => speak(questionData.english);
+    }
+
     currentLevelDisplay.textContent = `${currentQuizLevel} 퀴즈`;
     scoreDisplay.textContent = `점수: ${score} / ${currentQuestions.length}`;
     
@@ -626,6 +695,16 @@ function initializeApp() {
     // 앱 시작 시 진행 상황 로드 및 레벨 선택 화면 렌더링
     loadProgress(); 
     renderLevelSelector();
+
+    // NEW: Web Speech API 목소리 로드
+    if ('speechSynthesis' in window) {
+        // 브라우저에 따라 getVoices()가 비동기적으로 작동하므로,
+        // voiceschanged 이벤트가 발생했을 때 목소리 목록을 가져옵니다.
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        loadVoices(); // 초기 로드 시도 (일부 브라우저에서는 즉시 목록 반환)
+    }
 }
 
 // DOM이 완전히 로드된 후 앱 초기화 함수를 실행
