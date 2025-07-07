@@ -768,44 +768,9 @@ async function initializeApp() {
     
     // 앱 시작 시, 모든 UI 요소에 대한 첫 참조 설정
     reassignQuizViewElements(); 
-
-    if (nextQuestionButton) {
-        nextQuestionButton.addEventListener('click', function() {
-            console.log("[DEBUG] Next question button clicked.");
-            currentQuestionIndex++;
-            renderQuestion();
-        });
-    } else {
-        console.error("[DEBUG] nextQuestionButton not found on initial load.");
-    }
     
-    // 진행 상황 초기화 버튼 이벤트
-    if (resetProgressButton) {
-        resetProgressButton.onclick = () => {
-            if (confirm("정말로 모든 진행 상황을 초기화하시겠습니까? (레벨 잠금 해제, 정답/오답 문제 기록이 모두 초기화됩니다)")) {
-                localStorage.removeItem('simpleQuizUnlockedLevels'); 
-                localStorage.removeItem('simpleQuizAnsweredCorrectlyWords'); // NEW: 정답 기록 제거
-                localStorage.removeItem('simpleQuizIncorrectWords'); // NEW: 오답 기록 제거
-                
-                // 메모리상의 변수도 초기화
-                unlockedLevels = new Set();
-                answeredCorrectlyWordIdsByLevel = {};
-                incorrectWordIdsByLevel = {};
-
-                loadProgress(); // localStorage가 비워졌으므로 초기 상태로 로드
-                renderLevelSelector(); 
-                const notification = document.createElement('div');
-                notification.textContent = '진행 상황이 초기화되었습니다.';
-                notification.className = 'fixed bottom-4 right-4 glass text-white p-3 rounded-lg shadow-md animate-pulse z-50';
-                document.body.appendChild(notification);
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-            }
-        };
-    } else {
-        console.error("[DEBUG] resetProgressButton not found on initial load.");
-    }
+    // 모든 이벤트 리스너를 한 곳에서 초기화
+    initializeEventListeners();
 
     // 앱 시작 시 진행 상황 로드 및 레벨 선택 화면 렌더링
     loadUserConfig();
@@ -835,6 +800,11 @@ function showNotification(message) {
 
 // --- 이벤트 리스너 초기화 ---
 function initializeEventListeners() {
+    if (!settingsButton || !closeSettingsButton || !saveSettingsButton || !questionsPerQuizInput || !settingsModal || !nextQuestionButton || !resetProgressButton) {
+        console.error("One or more UI elements for event listeners are missing.");
+        return;
+    }
+
     // 설정 모달 이벤트 리스너
     settingsButton.addEventListener('click', openSettingsModal);
     closeSettingsButton.addEventListener('click', closeSettingsModal);
@@ -854,12 +824,14 @@ function initializeEventListeners() {
     });
 
     // 다음 문제 버튼 (한 번만 연결)
+    // 참고: 이 버튼은 퀴즈 뷰가 다시 렌더링될 때 DOM에서 제거될 수 있습니다.
+    // 더 견고한 방법은 상위 컨테이너에 이벤트 위임을 사용하는 것입니다.
     nextQuestionButton.addEventListener('click', () => {
         currentQuestionIndex++;
         renderQuestion();
     });
 
-    // 진행 상황 초기화 버튼
+    // 진행 상황 초기화 버튼 (onclick 대신 addEventListener 사용으로 통일)
     resetProgressButton.addEventListener('click', () => {
         if (confirm("정말로 모든 진행 상황을 초기화하시겠습니까? (레벨 잠금 해제, 정답/오답 문제 기록이 모두 초기화됩니다)")) {
             localStorage.removeItem('simpleQuizUnlockedLevels');
