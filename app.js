@@ -15,6 +15,14 @@ const startRandomQuizButton = document.getElementById('start-random-quiz-button'
 const startIncorrectQuizButton = document.getElementById('start-incorrect-quiz-button');
 const backToLevelSelectButton = document.getElementById('back-to-level-select-button');
 
+// NEW: 설정 모달 관련 UI 요소들
+const settingsButton = document.getElementById('settings-button');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettingsButton = document.getElementById('close-settings-button');
+const saveSettingsButton = document.getElementById('save-settings-button');
+const questionsPerQuizInput = document.getElementById('questions-per-quiz-input');
+const questionsPerQuizValue = document.getElementById('questions-per-quiz-value');
+
 
 // 퀴즈 뷰 내부 요소들은 quizViewContainer.innerHTML이 재설정될 수 있으므로
 // renderQuestion() 또는 startQuiz() 진입 시 다시 참조를 갱신해야 합니다.
@@ -55,6 +63,11 @@ let answeredCorrectlyWordIdsByLevel = {}; // { '초급': Set<string>, '중급': 
 let incorrectWordIdsByLevel = {};       // { '초급': Set<string>, '중급': Set<string> } - 이전에 틀렸던 문제 ID
 
 let isAnswered = false; // 사용자가 현재 질문에 답했는지 여부
+
+// NEW: 사용자 설정
+let userConfig = {
+    questionsPerQuiz: QUESTIONS_PER_QUIZ // config.js의 기본값으로 시작
+};
 
 // NEW: 퀴즈 모드 상수 및 현재 퀴즈 모드 변수
 const QuizMode = {
@@ -139,6 +152,31 @@ function showScreen(screenToShow) {
     quizModeSelector.style.display = 'none'; // 퀴즈 모드 선택 UI도 숨김
 
     screenToShow.style.display = 'block';
+}
+
+// --- 설정 모달 함수 ---
+function openSettingsModal() {
+    if (!settingsModal || !questionsPerQuizInput || !questionsPerQuizValue) return;
+    
+    // 현재 설정값으로 UI 업데이트
+    questionsPerQuizInput.value = userConfig.questionsPerQuiz;
+    questionsPerQuizValue.textContent = userConfig.questionsPerQuiz;
+
+    settingsModal.style.display = 'flex';
+    // 애니메이션을 위해 약간의 딜레이 후 클래스 추가
+    setTimeout(() => {
+        settingsModal.classList.add('visible');
+    }, 10); 
+}
+
+function closeSettingsModal() {
+    if (!settingsModal) return;
+
+    settingsModal.classList.remove('visible');
+    // 애니메이션이 끝난 후 display: none 처리
+    setTimeout(() => {
+        settingsModal.style.display = 'none';
+    }, 300); // style.css의 transition 시간과 일치
 }
 
 // NEW: 사용 가능한 목소리를 로드하는 함수
@@ -309,8 +347,8 @@ function startQuiz() {
         console.log(`[DEBUG] New words available: ${newWords.length}`);
 
         // 새로운 문제가 부족하면 이미 정답 맞췄던 문제도 포함
-        if (newWords.length < QUESTIONS_PER_QUIZ) {
-            console.warn(`[DEBUG] Not enough new words (${newWords.length}) for ${QUESTIONS_PER_QUIZ} questions. Reusing answered words.`);
+        if (newWords.length < userConfig.questionsPerQuiz) {
+            console.warn(`[DEBUG] Not enough new words (${newWords.length}) for ${userConfig.questionsPerQuiz} questions. Reusing answered words.`);
             wordsToChooseFrom = allLevelWords; // 모든 단어를 다시 포함
             // 사용자에게 알림을 줄 수도 있습니다: "새로운 문제가 모두 소진되어, 이전에 맞췄던 문제가 포함됩니다."
         } else {
@@ -318,7 +356,7 @@ function startQuiz() {
         }
     }
     
-    currentQuestions = shuffleArray(wordsToChooseFrom).slice(0, QUESTIONS_PER_QUIZ);
+    currentQuestions = shuffleArray(wordsToChooseFrom).slice(0, userConfig.questionsPerQuiz);
     console.log(`[DEBUG] Final questions for quiz: ${currentQuestions.length}`);
 
     // 최종적으로 문제가 0개일 경우 처리
@@ -551,6 +589,31 @@ function renderResultScreen() {
     backToLevelsButton.classList.remove('btn-primary', 'btn-success');
 }
 
+function loadUserConfig() {
+    try {
+        const storedConfig = localStorage.getItem('simpleQuizUserConfig');
+        if (storedConfig) {
+            const parsedConfig = JSON.parse(storedConfig);
+            // 저장된 값이 유효한지 확인하고 병합
+            if (parsedConfig.questionsPerQuiz && typeof parsedConfig.questionsPerQuiz === 'number') {
+                userConfig.questionsPerQuiz = parsedConfig.questionsPerQuiz;
+            }
+            console.log("[DEBUG] Loaded user config:", userConfig);
+        } else {
+            console.log("[DEBUG] No user config found, using defaults.");
+        }
+    } catch (e) {
+        console.error("Failed to load user config from localStorage:", e);
+        // 기본값 사용
+        userConfig.questionsPerQuiz = QUESTIONS_PER_QUIZ;
+    }
+}
+
+function saveUserConfig() {
+    localStorage.setItem('simpleQuizUserConfig', JSON.stringify(userConfig));
+    console.log("[DEBUG] Saved user config:", userConfig);
+}
+
 function loadProgress() {
     try {
         const storedLevels = localStorage.getItem('simpleQuizUnlockedLevels');
@@ -745,6 +808,7 @@ async function initializeApp() {
     }
 
     // 앱 시작 시 진행 상황 로드 및 레벨 선택 화면 렌더링
+    loadUserConfig();
     loadProgress(); 
     renderLevelSelector();
 
@@ -757,6 +821,63 @@ async function initializeApp() {
         }
         loadVoices(); // 초기 로드 시도 (일부 브라우저에서는 즉시 목록 반환)
     }
+}
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.className = 'fixed bottom-4 right-4 glass text-white p-3 rounded-lg shadow-md animate-pulse z-50';
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// --- 이벤트 리스너 초기화 ---
+function initializeEventListeners() {
+    // 설정 모달 이벤트 리스너
+    settingsButton.addEventListener('click', openSettingsModal);
+    closeSettingsButton.addEventListener('click', closeSettingsModal);
+    saveSettingsButton.addEventListener('click', () => {
+        userConfig.questionsPerQuiz = parseInt(questionsPerQuizInput.value, 10);
+        saveUserConfig();
+        closeSettingsModal();
+        showNotification('설정이 저장되었습니다.');
+    });
+    questionsPerQuizInput.addEventListener('input', (e) => {
+        questionsPerQuizValue.textContent = e.target.value;
+    });
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            closeSettingsModal();
+        }
+    });
+
+    // 다음 문제 버튼 (한 번만 연결)
+    nextQuestionButton.addEventListener('click', () => {
+        currentQuestionIndex++;
+        renderQuestion();
+    });
+
+    // 진행 상황 초기화 버튼
+    resetProgressButton.addEventListener('click', () => {
+        if (confirm("정말로 모든 진행 상황을 초기화하시겠습니까? (레벨 잠금 해제, 정답/오답 문제 기록이 모두 초기화됩니다)")) {
+            localStorage.removeItem('simpleQuizUnlockedLevels');
+            localStorage.removeItem('simpleQuizAnsweredCorrectlyWords');
+            localStorage.removeItem('simpleQuizIncorrectWords');
+            localStorage.removeItem('simpleQuizUserConfig'); // 설정도 초기화
+
+            // 메모리상의 변수도 초기화
+            unlockedLevels = new Set();
+            answeredCorrectlyWordIdsByLevel = {};
+            incorrectWordIdsByLevel = {};
+            userConfig.questionsPerQuiz = QUESTIONS_PER_QUIZ; // 기본값으로 복원
+
+            loadProgress();
+            renderLevelSelector();
+            showNotification('진행 상황이 초기화되었습니다.');
+        }
+    });
 }
 
 // DOM이 완전히 로드된 후 앱 초기화 함수를 실행
