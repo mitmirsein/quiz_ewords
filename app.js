@@ -734,7 +734,10 @@ async function initializeApp() {
 
     // NEW: word_bank.txt에서 단어 데이터 로드 및 파싱
     try {
-        const response = await fetch('word_bank.txt');
+        // Cache-busting: Add a unique query parameter to prevent the browser from using an old, cached version of the file.
+        // This ensures that any changes to the word bank are immediately reflected in the app.
+        const cacheBuster = `v=${new Date().getTime()}`;
+        const response = await fetch(`word_bank.txt?${cacheBuster}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -787,6 +790,7 @@ async function initializeApp() {
                 }
             }
         }
+        console.log(`[DEBUG] Successfully loaded and parsed ${ALL_WORDS_DATA.length} words and phrases.`);
 
     } catch (error) {
         document.body.innerHTML = `
